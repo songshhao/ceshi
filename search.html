@@ -216,7 +216,7 @@
 							if (filters.type !== '全部') {
 								params.categoryCode = categoryMap[filters.type];
 							}
-							const res = await axios.get('http://localhost:8080/api/search', {
+							const res = await axios.get('http://172.20.10.5:8080/api/search', {
 								params
 							});
 							if (res.data && res.data.code === 200) {
@@ -286,4 +286,5 @@
 		</script>
 
 	</body>
+
 </html>
