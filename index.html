@@ -237,7 +237,7 @@
 						// 获取热门资源接口
 						const fetchHotResources = async () => {
 							try {
-								const res = await axios.get("http://localhost:8080/api/hot");
+								const res = await axios.get("http://172.20.10.5:8080/api/hot");
 								if (res.data && res.data.code === 200) {
 									hotResources.value = res.data.data;
 								} else {
@@ -325,4 +325,5 @@
 				app.mount("#app");
 			</script>
 	</body>
+
 </html>
