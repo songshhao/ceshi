@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<title>宋溪资源站</title>
+		<meta name="referrer" content="no-referrer">
+		<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+		<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+		<script src="https://unpkg.com/element-plus"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcanvas/3.0.0/qrcanvas.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="search.css">
+	</head>
+	<body>
+		<div class="head-bg"></div>
+		<div id="app" v-cloak>
+			<!-- 头部导航 -->
+			<header class="header-container">
+				<div class="header-content">
+					<a href="index.html" class="logo-box">
+						<i class="fas fa-cloud-download-alt logo-icon"></i>
+						<div class="logo-text">宋溪资源站</div>
+					</a>
+					
+					<div class="search-container">
+						<input type="text" class="search-input" placeholder="输入电影、剧集、动漫等关键词..." v-model="keyword"
+							@keyup.enter="search">
+						<button class="search-btn" @click="search">
+							<i class="fas fa-search"></i>
+						</button>
+					</div>
+
+					<div class="nav-items">
+						<div class="nav-item primary" @click="openSubmitDialog">
+							<i class="fas fa-plus-circle"></i> 提交需求
+						</div>
+					</div>
+
+					<button class="mobile-submit-btn" @click="openSubmitDialog">
+						<i class="fas fa-plus-circle"></i>
+						<span>提交需求</span>
+					</button>
+				</div>
+			</header>
+
+			<!-- 主体内容 -->
+			<main class="main-container">
+				<div class="search-results-container">
+					<!-- 侧边栏筛选 -->
+					<div class="results-sidebar">
+						<div class="filter-section">
+							<h3 class="filter-title">
+								<i class="fas fa-filter"></i> 资源筛选
+							</h3>
+							<div class="filter-tags">
+								<div v-for="t in ['全部','短剧','电影','电视剧','动漫','综艺']" :key="t" class="filter-tag"
+									:class="{ active: filters.type === t }" @click="changeType(t)">{{ t }}</div>
+							</div>
+						</div>
+
+						<div class="filter-section">
+							<h3 class="filter-title">
+								<i class="fas fa-sort-amount-down"></i> 排序方式
+							</h3>
+							<div class="filter-tags">
+								<div v-for="s in ['相关度','最新','最热']" :key="s" class="filter-tag"
+									:class="{ active: filters.sort === s }" @click="changeSort(s)">{{ s }}</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- 主内容区 -->
+					<div class="results-main">
+						<div class="results-header">
+							<h2 class="results-title">搜索结果：{{ keyword }}</h2>
+							<div class="results-count">为您找到相关资源 {{ results.length }} 条</div>
+						</div>
+
+						<!-- 搜索结果列表 -->
+						<div class="results-list">
+							<div v-if="loading" class="loading">
+								<div class="spinner"></div>
+								<span>加载中...</span>
+							</div>
+							<div v-else-if="results.length === 0" class="no-results">
+								<i class="fas fa-search-minus"></i>
+								<p>没有找到相关资源</p>
+								<p class="no-results-hint">请尝试其他关键词或资源类型</p>
+							</div>
+							<!-- 修改后的卡片HTML -->
+							<div v-for="(item, index) in results" :key="index" class="result-item">
+								<h3 class="result-title">{{ item.title }}</h3>
+								<div class="result-meta">
+									<div class="result-meta-item">
+										<i class="fas fa-calendar"></i> {{ formatDate(item.updatedAt) }}
+									</div>
+									<div class="result-source">
+										<i class="fab fa-dropbox"></i> {{ item.source }}
+									</div>
+								</div>
+								<div class="result-actions">
+									<button class="action-btn copy-btn" @click="copyToClipboard(item.link)">
+										<i class="fas fa-share-alt"></i> 复制分享
+									</button>
+									<a class="action-btn visit-btn" :href="item.link" target="_blank">
+										<i class="fas fa-external-link-alt"></i> 立即访问
+									</a>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
+
+			<!-- 页脚 -->
+			<footer class="footer-container">
+				<div class="footer-content">
+					<p class="footer-statement">
+						声明：本站是网盘索引系统,所有内容均来自互联网所提供的公开引用资源，不存储、不传播任何文件，跳转链接指向网盘官网。
+						文件内容请自行辨别，如发现违规请向网盘平台举报。本站仅供学习交流，无任何收费行为。
+					</p>
+
+					<div class="copyright">
+						© 2025 宋溪资源站 - 让资源获取更简单
+					</div>
+				</div>
+			</footer>
+
+			<!-- 提交需求对话框 -->
+			<el-dialog v-model="submitDialogVisible" title="提交资源需求" width="90%" :max-width="500"
+				custom-class="resource-dialog">
+				<el-input type="textarea" :rows="5" placeholder="请输入您想看的资源信息，我们会尽快添加~" v-model="resourceRequest">
+				</el-input>
+				<template #footer>
+					<span class="dialog-footer">
+						<el-button @click="submitDialogVisible = false">取消</el-button>
+						<el-button type="primary" @click="submitResourceRequest">
+							提交需求
+						</el-button>
+					</span>
+				</template>
+			</el-dialog>
+		</div>
+		<script>
+			const {
+				createApp,
+				ref,
+				reactive,
+				onMounted
+			} = Vue;
+			const {
+				ElMessage
+			} = ElementPlus; // **这句必须加**
+			const app = createApp({
+				setup() {
+					// 分类映射，前端显示名称 => 后端categoryCode
+					const categoryMap = {
+						'全部': '',
+						'短剧': 'short_drama',
+						'电影': 'movie',
+						'电视剧': 'tv_series',
+						'动漫': 'anime',
+						'综艺': 'variety_show'
+					};
+
+					const keyword = ref('');
+					const results = ref([]);
+					const loading = ref(false);
+
+					// 当前筛选条件
+					const filters = reactive({
+						type: '全部', // 分类
+						sort: '相关度' // 排序
+					});
+
+					// 日期格式化方法 - 将包含秒的时间转换为年月日
+					const formatDate = (dateString) => {
+						if (!dateString) return '';
+
+						// 创建日期对象
+						const date = new Date(dateString);
+
+						// 处理无效日期
+						if (isNaN(date.getTime())) {
+							return dateString;
+						}
+
+						// 获取年月日
+						const year = date.getFullYear();
+						const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，+1后补0
+						const day = String(date.getDate()).padStart(2, '0'); // 日期补0
+
+						// 返回YYYY-MM-DD格式
+						return `${year}-${month}-${day}`;
+					};
+					// 从 URL 解析关键词
+					const getKeywordFromURL = () => {
+						const params = new URLSearchParams(window.location.search);
+						return params.get('keyword') || '';
+					};
+
+					// 搜索方法
+					const search = async () => {
+						if (!keyword.value.trim()) {
+							ElMessage.error('请输入搜索关键词');
+							return;
+						}
+						loading.value = true;
+						try {
+							const params = {
+								keyword: keyword.value,
+								sort: filters.sort
+							};
+							if (filters.type !== '全部') {
+								params.categoryCode = categoryMap[filters.type];
+							}
+							const res = await axios.get('http://localhost:8080/api/search', {
+								params
+							});
+							if (res.data && res.data.code === 200) {
+								results.value = res.data.data || [];
+							} else {
+								results.value = [];
+								ElMessage.warning(res.data.message || '未找到相关资源');
+							}
+						} catch (error) {
+							console.error(error);
+							ElMessage.error('搜索失败，请稍后再试');
+						} finally {
+							loading.value = false;
+						}
+					};
+
+					// 切换分类
+					const changeType = (type) => {
+						filters.type = type;
+						search();
+					};
+
+					// 切换排序
+					const changeSort = (sort) => {
+						filters.sort = sort;
+						search();
+					};
+
+					// 初始化
+					onMounted(() => {
+						keyword.value = getKeywordFromURL();
+						if (keyword.value) {
+							search();
+						}
+					});
+
+					// 复制到剪贴板示例（你之前写的）
+					const copyToClipboard = async (text) => {
+						if (!navigator.clipboard) {
+							ElMessage.error("浏览器不支持剪贴板API");
+							return;
+						}
+						try {
+							await navigator.clipboard.writeText(text);
+							ElMessage.success("复制成功");
+						} catch (e) {
+							ElMessage.error("复制失败");
+						}
+					};
+
+					return {
+						keyword,
+						results,
+						loading,
+						filters,
+						search,
+						changeType,
+						changeSort,
+						copyToClipboard,
+						formatDate
+					};
+				}
+			});
+
+			app.use(ElementPlus);
+			app.mount('#app');
+		</script>
+
+	</body>
+</html>

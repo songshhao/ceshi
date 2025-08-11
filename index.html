@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<title>宋溪资源搜索站</title>
+		<meta name="referrer" content="no-referrer" />
+		<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+		<!-- 这里改用完整版 Vue，避免运行时版本无法处理事件修饰符 -->
+		<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+		<script src="https://unpkg.com/element-plus"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcanvas/3.0.0/qrcanvas.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="index.css" />
+	</head>
+	<body>
+		<div class="head-bg"></div>
+		<div id="app" v-cloak>
+			<!-- 头部导航 -->
+			<header class="header-container">
+				<div class="header-content">
+					<a href="#" class="logo-box">
+						<i class="fas fa-cloud-download-alt logo-icon"></i>
+						<div class="logo-text">宋溪资源站</div>
+					</a>
+
+					<div class="search-container">
+						<input type="text" class="search-input" placeholder="输入电影、剧集、动漫等关键词..." v-model="keyword"
+							@keyup="onKeyup" />
+						<button class="search-btn" @click="search">
+							<i class="fas fa-search"></i>
+						</button>
+					</div>
+
+					<div class="nav-items">
+						<!-- 电脑端只保留提交需求按钮 -->
+						<div class="nav-item primary" @click="openSubmitDialog">
+							<i class="fas fa-plus-circle"></i> 提交需求
+						</div>
+					</div>
+
+					<!-- 添加汉堡菜单按钮 -->
+					<button class="hamburger-btn" @click="openSideMenu">
+						<i class="fas fa-bars"></i>
+					</button>
+				</div>
+			</header>
+
+			<!-- 主体内容 -->
+			<main class="main-container">
+				<section class="hero-section animate-fadeIn">
+					<!-- 修改标题 -->
+					<h1 class="hero-title">宋溪资源搜索站 - 您的网盘资源管家</h1>
+					<p class="hero-subtitle">
+						免费分享百万级网盘资源，致力打造顶尖网盘搜索引擎，让您畅享资源无忧！
+						最新影视、热门动漫、精彩综艺一键获取，全网资源尽在掌握。
+					</p>
+
+					<div class="search-box">
+						<input type="text" class="search-input" placeholder="输入关键字搜索海量资源..." v-model="keyword"
+							@keyup="onKeyup" />
+						<button class="search-btn" @click="search">
+							<i class="fas fa-search"></i>
+						</button>
+					</div>
+				</section>
+
+				<section class="category-section">
+					<div class="category-card animate-fadeIn delay-100">
+						<div class="category-header">
+							<i class="fas fa-film"></i> 热门短剧
+						</div>
+						<div class="category-list">
+							<a href="#" class="resource-item" v-for="(item, index) in hotResources.shortDrama"
+								:key="index" @click.prevent="showResourceDetail(item.title, '短剧')">
+								<div class="resource-rank">{{ index + 1 }}</div>
+								<div class="resource-name">{{ item.title }}</div>
+							</a>
+						</div>
+					</div>
+
+					<div class="category-card animate-fadeIn delay-200">
+						<div class="category-header">
+							<i class="fas fa-video"></i> 最新电影
+						</div>
+						<div class="category-list">
+							<a href="#" class="resource-item" v-for="(item, index) in hotResources.movie" :key="index"
+								@click.prevent="showResourceDetail(item.title, '电影')">
+								<div class="resource-rank">{{ index + 1 }}</div>
+								<div class="resource-name">{{ item.title }}</div>
+							</a>
+						</div>
+					</div>
+
+					<div class="category-card animate-fadeIn delay-300">
+						<div class="category-header">
+							<i class="fas fa-tv"></i> 电视剧集
+						</div>
+						<div class="category-list">
+							<a href="#" class="resource-item" v-for="(item, index) in hotResources.tv" :key="index"
+								@click.prevent="showResourceDetail(item.title, '电视剧')">
+								<div class="resource-rank">{{ index + 1 }}</div>
+								<div class="resource-name">{{ item.title }}</div>
+							</a>
+						</div>
+					</div>
+
+					<div class="category-card animate-fadeIn delay-400">
+						<div class="category-header">
+							<i class="fas fa-dragon"></i> 动漫动画
+						</div>
+						<div class="category-list">
+							<a href="#" class="resource-item" v-for="(item, index) in hotResources.anime" :key="index"
+								@click.prevent="showResourceDetail(item.title, '动漫')">
+								<div class="resource-rank">{{ index + 1 }}</div>
+								<div class="resource-name">{{ item.title }}</div>
+							</a>
+						</div>
+					</div>
+
+					<div class="category-card animate-fadeIn delay-500">
+						<div class="category-header">
+							<i class="fas fa-microphone-alt"></i> 综艺节目
+						</div>
+						<div class="category-list">
+							<a href="#" class="resource-item" v-for="(item, index) in hotResources.variety" :key="index"
+								@click.prevent="showResourceDetail(item.title, '综艺')">
+								<div class="resource-rank">{{ index + 1 }}</div>
+								<div class="resource-name">{{ item.title }}</div>
+							</a>
+						</div>
+					</div>
+				</section>
+
+			</main>
+
+			<!-- 页脚 -->
+			<footer class="footer-container">
+				<div class="footer-content">
+					<p class="footer-statement">
+						声明：本站是网盘索引系统,所有内容均来自互联网所提供的公开引用资源，不存储、不传播任何文件，跳转链接指向网盘官网。
+						文件内容请自行辨别，如发现违规请向网盘平台举报。本站仅供学习交流，无任何收费行为。
+					</p>
+
+					<div class="copyright">
+						<!-- 修改版权信息 -->
+						© 2025 宋溪资源搜索站 - 让资源获取更简单
+					</div>
+				</div>
+			</footer>
+
+			<!-- 侧边菜单 -->
+			<div class="side-menu-overlay" :class="{ active: sideMenuVisible }" @click.self="closeSideMenu">
+				<div class="side-menu">
+					<div class="side-menu-header">
+						<h3>宋溪资源搜索站</h3>
+						<button class="menu-close-btn" @click="closeSideMenu">
+							<i class="fas fa-times"></i>
+						</button>
+					</div>
+
+					<div class="menu-items">
+						<div class="menu-item" @click="openSubmitDialog">
+							<i class="fas fa-plus-circle"></i>
+							<span>提交需求</span>
+						</div>
+
+						<div class="menu-item" @click="showHelpDocument">
+							<i class="fas fa-question-circle"></i>
+							<span>帮助中心</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- 提交需求对话框 -->
+			<el-dialog v-model="submitDialogVisible" title="提交资源需求" width="90%" :max-width="500"
+				custom-class="resource-dialog">
+				<el-input type="textarea" :rows="5" placeholder="请输入您想看的资源信息，我们会尽快添加~" v-model="resourceRequest">
+				</el-input>
+				<template #footer>
+					<span class="dialog-footer">
+						<el-button @click="submitDialogVisible = false">取消</el-button>
+						<el-button type="primary" @click="submitResourceRequest">
+							提交需求
+						</el-button>
+					</span>
+				</template>
+			</el-dialog>
+
+			<script>
+				const {
+					createApp,
+					ref,
+					onMounted
+				} = Vue;
+				const {
+					ElMessage
+				} = ElementPlus;
+
+				const app = createApp({
+					setup() {
+						const keyword = ref("");
+						const results = ref([]);
+						const loading = ref(false);
+
+						const hotResources = ref({
+							shortDrama: [],
+							movie: [],
+							tv: [],
+							anime: [],
+							variety: [],
+						});
+
+						const sideMenuVisible = ref(false);
+						const submitDialogVisible = ref(false);
+						const resourceRequest = ref("");
+
+						// 从 URL 获取关键词
+						const getKeywordFromURL = () => {
+							const params = new URLSearchParams(window.location.search);
+							return params.get("keyword") || "";
+						};
+
+						// 搜索接口
+						const search = () => {
+							if (!keyword.value.trim()) {
+								ElMessage.warning("请输入搜索关键词");
+								return;
+							}
+							// 只跳转，不调用接口
+							window.location.href = `search.html?keyword=${encodeURIComponent(keyword.value.trim())}`;
+						};
+
+
+						// 获取热门资源接口
+						const fetchHotResources = async () => {
+							try {
+								const res = await axios.get("http://localhost:8080/api/hot");
+								if (res.data && res.data.code === 200) {
+									hotResources.value = res.data.data;
+								} else {
+									ElMessage.warning(res.data.message || "获取热门资源失败");
+								}
+							} catch (e) {
+								console.error(e);
+								ElMessage.error("获取热门资源失败");
+							}
+						};
+
+						// 显示详情跳转
+						const showResourceDetail = (title, category) => {
+							const url =
+								`search.html?keyword=${encodeURIComponent(title)}&category=${encodeURIComponent(category)}`;
+							window.location.href = url;
+						};
+
+
+						// 汉堡菜单控制
+						const openSideMenu = () => {
+							sideMenuVisible.value = true;
+						};
+						const closeSideMenu = () => {
+							sideMenuVisible.value = false;
+						};
+
+						// 提交需求弹窗
+						const openSubmitDialog = () => {
+							submitDialogVisible.value = true;
+						};
+
+						// 提交资源需求
+						const submitResourceRequest = () => {
+							if (!resourceRequest.value.trim()) {
+								ElMessage.warning("请输入需求内容");
+								return;
+							}
+							// 这里调用后端接口提交需求
+							// axios.post(...)
+							ElMessage.success("提交成功，感谢您的支持！");
+							resourceRequest.value = "";
+							submitDialogVisible.value = false;
+						};
+
+						// 帮助中心弹窗（示例）
+						const showHelpDocument = () => {
+							ElMessage.info("帮助文档功能暂未实现");
+						};
+
+						// 监听回车搜索，替代事件修饰符
+						const onKeyup = (event) => {
+							if (event.key === "Enter") {
+								search();
+							}
+						};
+
+						onMounted(() => {
+							keyword.value = getKeywordFromURL();
+							if (keyword.value) search();
+							fetchHotResources();
+						});
+
+						return {
+							keyword,
+							results,
+							loading,
+							hotResources,
+							search,
+							showResourceDetail,
+							sideMenuVisible,
+							openSideMenu,
+							closeSideMenu,
+							submitDialogVisible,
+							openSubmitDialog,
+							resourceRequest,
+							submitResourceRequest,
+							showHelpDocument,
+							onKeyup,
+						};
+					},
+				});
+
+				app.use(ElementPlus);
+				app.mount("#app");
+			</script>
+	</body>
+</html>
