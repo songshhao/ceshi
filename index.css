@@ -252,8 +252,6 @@ body {
 	line-height: 1.7;
 }
 
-
-
 .search-box {
 	max-width: 750px;
 	margin: 0 auto;
@@ -893,4 +891,49 @@ body {
 	.hamburger-btn {
 		font-size: 20px;
 	}
+
+	.el-dialog--width-90 {
+		width: 95% !important;
+		max-width: 95% !important;
+		margin: 10px auto !important;
+	}
+
+	.tutorial-content {
+		padding: 5px 0;
+	}
+
+	.tutorial-content h3 {
+		font-size: 18px;
+		margin-bottom: 12px;
+		padding: 0 5px;
+	}
+
+	.tutorial-step {
+		margin-bottom: 15px;
+		padding: 0 5px;
+	}
+
+	.step-number {
+		width: 26px;
+		height: 26px;
+		font-size: 14px;
+		margin-right: 10px;
+	}
+
+	.step-content {
+		font-size: 14px;
+		line-height: 1.6;
+	}
+
+	.dialog-footer {
+		display: flex;
+		justify-content: center;
+		padding: 10px 0 5px;
+	}
+
+	.el-dialog__header {
+		padding: 15px 15px 10px;
+	}
+
+
 }
