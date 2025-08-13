@@ -911,7 +911,7 @@
 					methods: {
 						async loadAccessData() {
 							try {
-								const res = await fetch("http://localhost:8080/api/access/list");
+								const res = await fetch("http://192.168.1.25:8080/api/access/list");
 								const data = await res.json();
 								this.accessData = Array.isArray(data) ? data : []; // 确保是数组
 							} catch (e) {
@@ -920,11 +920,11 @@
 							}
 						},
 						exportExcel(realtime) {
-							window.open(`http://localhost:8080/api/access/export?realtime=${realtime}`);
+							window.open(`http://192.168.1.25:8080/api/access/export?realtime=${realtime}`);
 						},
 						async deleteAll() {
 							try {
-								await fetch("http://localhost:8080/api/access/delete-all", {
+								await fetch("http://192.168.1.25:8080/api/access/delete-all", {
 									method: "DELETE"
 								});
 								ElMessage.success("已删除");
@@ -950,7 +950,7 @@
 
 								try {
 									const response = await fetch(
-										"http://localhost:8080/api/admin/change-password", {
+										"http://192.168.1.25:8080/api/admin/change-password", {
 											method: "POST",
 											headers: {
 												"Content-Type": "application/json",
@@ -990,7 +990,7 @@
 						async fetchDashboardStats() {
 							try {
 								const response = await fetch(
-									"http://localhost:8080/api/dashboard/stats");
+									"http://192.168.1.25:8080/api/dashboard/stats");
 								if (!response.ok) {
 									throw new Error(`HTTP 错误 ${response.status}`);
 								}
@@ -1015,7 +1015,7 @@
 						async fetchTutorials() {
 							try {
 								const res = await fetch(
-									"http://localhost:8080/api/tutorial");
+									"http://192.168.1.25:8080/api/tutorial");
 								const data = await res.json();
 								if (data.code === 200) {
 									this.tutorials = data.data; // 假设返回列表在 data.data
@@ -1032,7 +1032,7 @@
 						async fetchCategories(page = 1, size = this.categoryPageSize) {
 							try {
 								const response = await fetch(
-									`http://localhost:8080/api/categories?page=${page}&size=${size}`
+									`http://192.168.1.25:8080/api/categories?page=${page}&size=${size}`
 								);
 								if (!response.ok) throw new Error("网络错误，状态码：" +
 									response.status);
@@ -1066,7 +1066,7 @@
 						async saveCategory() {
 							try {
 								const response = await fetch(
-									'http://localhost:8080/api/categories', {
+									'http://192.168.1.25:8080/api/categories', {
 										method: 'POST',
 										headers: {
 											'Content-Type': 'application/json'
@@ -1105,7 +1105,7 @@
 						async updateCategory() {
 							try {
 								const response = await fetch(
-									`http://localhost:8080/api/categories/${this.categoryForm.id}`, {
+									`http://192.168.1.25:8080/api/categories/${this.categoryForm.id}`, {
 										method: 'PUT',
 										headers: {
 											'Content-Type': 'application/json'
@@ -1163,7 +1163,7 @@
 							try {
 								if (this.deleteType === 'category') {
 									const response = await fetch(
-										`http://localhost:8080/api/categories/${this.deleteId}`, {
+										`http://192.168.1.25:8080/api/categories/${this.deleteId}`, {
 											method: 'DELETE'
 										});
 									const resData = await response
@@ -1181,7 +1181,7 @@
 								} else if (this.deleteType ===
 									'resource') {
 									const response = await fetch(
-										`http://localhost:8080/api/resources/${this.deleteId}`, {
+										`http://192.168.1.25:8080/api/resources/${this.deleteId}`, {
 											method: 'DELETE'
 										});
 									const resData = await response
@@ -1205,7 +1205,7 @@
 										return;
 									}
 									const response = await fetch(
-										'http://localhost:8080/api/resources/batch-delete', {
+										'http://192.168.1.25:8080/api/resources/batch-delete', {
 											method: 'POST',
 											headers: {
 												'Content-Type': 'application/json'
@@ -1229,7 +1229,7 @@
 								} else if (this.deleteType ===
 									'suggestion') {
 									const response = await fetch(
-										`http://localhost:8080/api/suggestions/${this.deleteId}`, {
+										`http://192.168.1.25:8080/api/suggestions/${this.deleteId}`, {
 											method: 'DELETE'
 										});
 									const resData = await response
@@ -1307,7 +1307,7 @@
 						//获取用户建议分页
 						fetchSuggestions(page = 0, size = 10) {
 							fetch(
-									`http://localhost:8080/api/suggestions?page=${page}&size=${size}`)
+									`http://192.168.1.25:8080/api/suggestions?page=${page}&size=${size}`)
 								.then(res => res.json())
 								.then(data => {
 									if (data.code === 200) {
@@ -1348,7 +1348,7 @@
 							this.processSuggestionDialogVisible = true;
 						},
 						processSuggestion() {
-							fetch(`http://localhost:8080/api/suggestions/${this.suggestionForm.id}/status`, {
+							fetch(`http://192.168.1.25:8080/api/suggestions/${this.suggestionForm.id}/status`, {
 									method: 'PUT'
 								})
 								.then(res => res.json())
@@ -1388,7 +1388,7 @@
 
 							try {
 								const res = await fetch(
-									`http://localhost:8080/api/tutorial/${this.tutorialForm.id}`, {
+									`http://192.168.1.25:8080/api/tutorial/${this.tutorialForm.id}`, {
 										method: "PUT",
 										headers: {
 											"Content-Type": "application/json"
@@ -1457,7 +1457,7 @@
 						async saveResource() {
 							try {
 								const response = await fetch(
-									"http://localhost:8080/api/resources", {
+									"http://192.168.1.25:8080/api/resources", {
 										method: "POST",
 										headers: {
 											"Content-Type": "application/json"
@@ -1491,7 +1491,7 @@
 						async updateResource() {
 							try {
 								const response = await fetch(
-									`http://localhost:8080/api/resources/${this.resourceForm.id}`, {
+									`http://192.168.1.25:8080/api/resources/${this.resourceForm.id}`, {
 										method: "PUT",
 										headers: {
 											"Content-Type": "application/json"
@@ -1565,7 +1565,7 @@
 
 								const response =
 									await fetch(
-										`http://localhost:8080/api/resources/page?${params.toString()}`
+										`http://192.168.1.25:8080/api/resources/page?${params.toString()}`
 									);
 								const resData =
 									await response
@@ -1635,7 +1635,7 @@
 						// 导出全部资源到Excel
 						exportResources() {
 							fetch(
-									'http://localhost:8080/api/resources')
+									'http://192.168.1.25:8080/api/resources')
 								.then(res => {
 									if (!res.ok)
 										throw new Error(
@@ -1943,7 +1943,7 @@
 							try {
 								const response =
 									await fetch(
-										'http://localhost:8080/api/resources/importBatch', {
+										'http://192.168.1.25:8080/api/resources/importBatch', {
 											method: 'POST',
 											headers: {
 												'Content-Type': 'application/json'
@@ -2175,7 +2175,7 @@
 						const token = localStorage.getItem("token");
 						if (token) {
 							// 如果后端提供 /api/admin/current 接口获取当前用户信息
-							fetch("http://localhost:8080/api/admin/current", {
+							fetch("http://192.168.1.25:8080/api/admin/current", {
 									headers: {
 										"Authorization": "Bearer " + token
 									}
@@ -2203,3 +2203,4 @@
 	</body>
 
 </html>
+
