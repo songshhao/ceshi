@@ -503,6 +503,65 @@ body {
 	color: #7c8ba1;
 }
 
+/* 分页样式优化 */
+.el-pagination {
+	margin: 30px auto 10px;
+	/* 上下间距并居中 */
+	display: flex;
+	justify-content: center;
+	padding: 10px 0;
+}
+
+/* 分页按钮基础样式 */
+.el-pagination__button {
+	border-radius: var(--border-radius);
+	transition: var(--transition);
+	margin: 0 4px;
+	padding: 4px 12px;
+	border: 1px solid #e5e7eb;
+}
+
+/* 分页按钮 hover 效果 */
+.el-pagination__button:hover:not(.is-disabled):not(.is-active) {
+	color: var(--primary-color);
+	border-color: var(--primary-color);
+	background-color: var(--primary-light);
+	transform: translateY(-2px);
+}
+
+/* 激活状态按钮 */
+.el-pagination__button.is-active {
+	background-color: var(--primary-color);
+	color: white;
+	border-color: var(--primary-color);
+	box-shadow: 0 4px 10px rgba(67, 97, 238, 0.2);
+}
+
+/* 上一页/下一页按钮 */
+.el-pagination__prev,
+.el-pagination__next {
+	border-radius: var(--border-radius);
+	transition: var(--transition);
+	margin: 0 4px;
+	padding: 4px 10px;
+}
+
+.el-pagination__prev:hover:not(.is-disabled),
+.el-pagination__next:hover:not(.is-disabled) {
+	color: var(--primary-color);
+	border-color: var(--primary-color);
+	background-color: var(--primary-light);
+}
+
+/* 禁用状态按钮 */
+.el-pagination__button.is-disabled,
+.el-pagination__prev.is-disabled,
+.el-pagination__next.is-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+
 /* 响应式调整 */
 @media (max-width: 900px) {
 	.search-results-container {
@@ -546,6 +605,7 @@ body {
 	.results-main {
 		width: 100%;
 	}
+
 
 	/* 头部优化 */
 	.header-container {
@@ -734,4 +794,13 @@ body {
 		/* 保留原有顶部间距 */
 	}
 
+	.el-pagination {
+		margin: 20px auto 5px;
+	}
+
+	.el-pagination__button {
+		padding: 2px 8px;
+		font-size: 13px;
+		margin: 0 2px;
+	}
 }
