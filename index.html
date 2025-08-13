@@ -305,7 +305,7 @@
 						// 热门资源获取
 						const fetchHotResources = async () => {
 						    try {
-						        const res = await fetch("http://localhost:8080/api/hot", {
+						        const res = await fetch("http://192.168.1.25:8080/api/hot", {
 						            credentials: 'include'
 						        });
 						        const data = await res.json();
@@ -323,7 +323,7 @@
 						// 教程链接获取
 						const fetchTutorial = async () => {
 						    try {
-						        const res = await fetch("http://localhost:8080/api/tutorial/latest", {
+						        const res = await fetch("http://192.168.1.25:8080/api/tutorial/latest", {
 						            credentials: 'include'
 						        });
 						        const data = await res.json();
@@ -357,7 +357,7 @@
 						        return;
 						    }
 						    try {
-						        const res = await fetch('http://localhost:8080/api/suggestions', {
+						        const res = await fetch('http://192.168.1.25:8080/api/suggestions', {
 						            method: 'POST',
 						            headers: {
 						                'Content-Type': 'application/json'
@@ -435,3 +435,4 @@
 	</body>
 
 </html>
+
