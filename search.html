@@ -23,11 +23,11 @@
 						<i class="fas fa-cloud-download-alt logo-icon"></i>
 						<div class="logo-text">宋溪资源站</div>
 					</a>
-					
+
 					<div class="search-container">
 						<input type="text" class="search-input" placeholder="输入电影、剧集、动漫等关键词..." v-model="keyword"
-							@keyup.enter="search">
-						<button class="search-btn" @click="search">
+							@keyup.enter="search()">
+						<button class="search-btn" @click="search(1)">
 							<i class="fas fa-search"></i>
 						</button>
 					</div>
@@ -75,7 +75,7 @@
 					<div class="results-main">
 						<div class="results-header">
 							<h2 class="results-title">搜索结果：{{ keyword }}</h2>
-							<div class="results-count">为您找到相关资源 {{ results.length }} 条</div>
+							<div class="results-count">为您找到相关资源 {{ totalItems }} 条</div>
 						</div>
 
 						<!-- 搜索结果列表 -->
@@ -94,7 +94,7 @@
 								<h3 class="result-title">{{ item.title }}</h3>
 								<div class="result-meta">
 									<div class="result-meta-item">
-										<i class="fas fa-calendar"></i> {{ formatDate(item.updatedAt) }}
+										<i class="fas fa-calendar"></i> {{ item.updatedAt }}
 									</div>
 									<div class="result-source">
 										<i class="fab fa-dropbox"></i> {{ item.source }}
@@ -109,7 +109,11 @@
 									</a>
 								</div>
 							</div>
+							<el-pagination v-if="totalPages > 1" background layout="prev, pager, next" :total="totalItems"
+								:page-size="pageSize" :current-page="currentPage" @current-change="handlePageChange">
+							</el-pagination>
 						</div>
+						
 					</div>
 				</div>
 			</main>
@@ -158,12 +162,15 @@
 					// 分类映射，前端显示名称 => 后端categoryCode
 					const categoryMap = {
 						'全部': '',
-						'短剧': 'short_drama',
-						'电影': 'movie',
-						'电视剧': 'tv_series',
-						'动漫': 'anime',
-						'综艺': 'variety_show'
+						'短剧': '1',
+						'电影': '2',
+						'电视剧': '3',
+						'动漫': '4',
+						'综艺': '5'
 					};
+					const currentPage = ref(1); // 当前页
+					const pageSize = ref(8); // 每页数量
+					const totalItems = ref(0); // 总数据量
 
 					const keyword = ref('');
 					const results = ref([]);
@@ -175,26 +182,6 @@
 						sort: '相关度' // 排序
 					});
 
-					// 日期格式化方法 - 将包含秒的时间转换为年月日
-					const formatDate = (dateString) => {
-						if (!dateString) return '';
-
-						// 创建日期对象
-						const date = new Date(dateString);
-
-						// 处理无效日期
-						if (isNaN(date.getTime())) {
-							return dateString;
-						}
-
-						// 获取年月日
-						const year = date.getFullYear();
-						const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，+1后补0
-						const day = String(date.getDate()).padStart(2, '0'); // 日期补0
-
-						// 返回YYYY-MM-DD格式
-						return `${year}-${month}-${day}`;
-					};
 					// 从 URL 解析关键词
 					const getKeywordFromURL = () => {
 						const params = new URLSearchParams(window.location.search);
@@ -202,27 +189,35 @@
 					};
 
 					// 搜索方法
-					const search = async () => {
+					const totalPages = ref(0);
+
+					const search = async (page = 1) => {
 						if (!keyword.value.trim()) {
 							ElMessage.error('请输入搜索关键词');
 							return;
 						}
 						loading.value = true;
 						try {
+							currentPage.value = page;
 							const params = {
 								keyword: keyword.value,
-								sort: filters.sort
+								page: page - 1,
+								size: pageSize.value
 							};
 							if (filters.type !== '全部') {
-								params.categoryCode = categoryMap[filters.type];
+								params.categoryId = categoryMap[filters.type];
 							}
 							const res = await axios.get('http://172.20.10.5:8080/api/search', {
 								params
 							});
 							if (res.data && res.data.code === 200) {
-								results.value = res.data.data || [];
+								results.value = res.data.data.content || [];
+								totalItems.value = res.data.data.totalElements;
+								totalPages.value = Math.ceil(totalItems.value / pageSize.value);
 							} else {
 								results.value = [];
+								totalItems.value = 0;
+								totalPages.value = 0;
 								ElMessage.warning(res.data.message || '未找到相关资源');
 							}
 						} catch (error) {
@@ -231,6 +226,9 @@
 						} finally {
 							loading.value = false;
 						}
+					};
+					const handlePageChange = (page) => {
+						search(page);
 					};
 
 					// 切换分类
@@ -275,8 +273,12 @@
 						search,
 						changeType,
 						changeSort,
+						totalPages,
 						copyToClipboard,
-						formatDate
+						totalItems,
+						pageSize,
+						currentPage,
+						handlePageChange
 					};
 				}
 			});
@@ -286,5 +288,4 @@
 		</script>
 
 	</body>
-
 </html>
