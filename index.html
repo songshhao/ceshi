@@ -12,7 +12,7 @@
 		<script src="https://unpkg.com/element-plus"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcanvas/3.0.0/qrcanvas.min.js"></script>
-		<link rel="stylesheet" type="text/css" href="index.css" />
+		<link rel="stylesheet" type="text/css" href="css/index.css" />
 	</head>
 	<style>
 		/* 新增教程弹窗样式 */
@@ -238,9 +238,12 @@
 					<p>地址可能不定期更换，建议您收藏下方的教程链接以便随时找回我们。</p>
 
 					<div class="tutorial-link-container">
-						<a href="https://example.com/tutorial" target="_blank" class="tutorial-link">
-							<i class="fas fa-external-link-alt"></i> 查看使用教程
+						<a :href="tutorialUrl" target="_blank" class="tutorial-link">
+						    <i class="fas fa-external-link-alt"></i> 查看使用教程
 						</a>
+
+
+
 					</div>
 				</div>
 				<template #footer>
@@ -261,21 +264,28 @@
 
 				const app = createApp({
 					setup() {
+						// 搜索相关
 						const keyword = ref("");
 						const results = ref([]);
 						const loading = ref(false);
 
+						// 热门资源
 						const hotResources = ref({
 							shortDrama: [],
 							movie: [],
 							tv: [],
 							anime: [],
 							variety: [],
-						});
+			 		});
 
+						// 页面控制
 						const sideMenuVisible = ref(false);
 						const submitDialogVisible = ref(false);
 						const resourceRequest = ref("");
+
+						// 教程弹窗
+			  	const tutorialDialogVisible = ref(false);
+						const tutorialUrl = ref(""); // 数据库链接
 
 						// 从 URL 获取关键词
 						const getKeywordFromURL = () => {
@@ -283,123 +293,137 @@
 							return params.get("keyword") || "";
 						};
 
-						// 搜索接口
+						// 搜索跳转
 						const search = () => {
 							if (!keyword.value.trim()) {
-								ElMessage.warning("请输入搜索关键词");
+			 				ElMessage.warning("请输入搜索关键词");
 								return;
 							}
-							// 只跳转，不调用接口
 							window.location.href = `search.html?keyword=${encodeURIComponent(keyword.value.trim())}`;
-						};
+			 		};
 
-
-						// 获取热门资源接口
+						// 热门资源获取
 						const fetchHotResources = async () => {
-							try {
-								const res = await axios.get("http://172.20.10.5:8080/api/hot");
-								if (res.data && res.data.code === 200) {
-									hotResources.value = res.data.data;
-								} else {
-									ElMessage.warning(res.data.message || "获取热门资源失败");
-								}
-							} catch (e) {
-								console.error(e);
-								ElMessage.error("获取热门资源失败");
-							}
+						    try {
+						        const res = await fetch("http://localhost:8080/api/hot", {
+						            credentials: 'include'
+						        });
+						        const data = await res.json();
+						        if (data.code === 200) {
+						            hotResources.value = data.data;
+						        } else {
+						            ElMessage.warning(data.message || "获取热门资源失败");
+						        }
+						    } catch (e) {
+						        console.error(e);
+						        ElMessage.error("获取热门资源失败");
+						    }
 						};
 
-						// 显示详情跳转
+						// 教程链接获取
+						const fetchTutorial = async () => {
+						    try {
+						        const res = await fetch("http://localhost:8080/api/tutorial/latest", {
+						            credentials: 'include'
+						        });
+						        const data = await res.json();
+						        if (data.code === 200 && data.data) {
+						            tutorialUrl.value = data.data.url;
+						        } else {
+						            console.warn("获取教程链接失败:", data.message);
+						        }
+						    } catch (err) {
+						        console.error("获取教程链接异常:", err);
+						    }
+						};
+
+						// 显示资源详情跳转
 						const showResourceDetail = (title, category) => {
-							const url =
+							window.location.href =
 								`search.html?keyword=${encodeURIComponent(title)}&category=${encodeURIComponent(category)}`;
-							window.location.href = url;
 						};
 
-
-						// 汉堡菜单控制
-						const openSideMenu = () => {
-							sideMenuVisible.value = true;
-						};
-						const closeSideMenu = () => {
-							sideMenuVisible.value = false;
-						};
+						// 汉堡菜单
+						const openSideMenu = () => sideMenuVisible.value = true;
+						const closeSideMenu = () => sideMenuVisible.value = false;
 
 						// 提交需求弹窗
-						const openSubmitDialog = () => {
-							submitDialogVisible.value = true;
-						};
+						const openSubmitDialog = () => submitDialogVisible.value = true;
 
 						// 提交资源需求
 						const submitResourceRequest = async () => {
-						  if (!resourceRequest.value.trim()) {
-						    ElMessage.warning("请输入需求内容");
-						    return;
-						  }
-						  try {
-						    const res = await axios.post('http://172.20.10.5:8080/api/suggestions', {
-						      content: resourceRequest.value
-						    });
-						    if (res.data.code === 200) {
-						      ElMessage.success(res.data.message);
-						      resourceRequest.value = "";
-						      submitDialogVisible.value = false;
-						    } else {
-						      ElMessage.error(res.data.message || "提交失败");
+						    if (!resourceRequest.value.trim()) {
+						        ElMessage.warning("请输入需求内容");
+						        return;
 						    }
-						  } catch (error) {
-						    ElMessage.error("提交失败: " + error.message);
-						  }
+						    try {
+						        const res = await fetch('http://localhost:8080/api/suggestions', {
+						            method: 'POST',
+						            headers: {
+						                'Content-Type': 'application/json'
+						            },
+						            body: JSON.stringify({
+						                content: resourceRequest.value
+						            }),
+						            credentials: 'include'
+						        });
+						        const data = await res.json();
+						        if (data.code === 200) {
+						            ElMessage.success(data.message);
+						            resourceRequest.value = "";
+						            submitDialogVisible.value = false;
+						        } else {
+						            ElMessage.error(data.message || "提交失败");
+						        }
+						    } catch (error) {
+						        ElMessage.error("提交失败: " + error.message);
+						    }
 						};
 
-
-
-
-						// 监听回车搜索，替代事件修饰符
+						// 回车搜索
 						const onKeyup = (event) => {
-							if (event.key === "Enter") {
-								search();
-							}
-						};
-						// 新增教程弹窗控制变量
-						const tutorialDialogVisible = ref(false);
-
-						// 打开教程弹窗方法
-						const openTutorialDialog = () => {
-							tutorialDialogVisible.value = true;
+							if (event.key === "Enter") search();
 						};
 
-						// 帮助中心点击事件（移动端）
-						const showHelpDocument = () => {
-							tutorialDialogVisible.value = true;
-						};
+						// 教程弹窗控制
+						const openTutorialDialog = () => tutorialDialogVisible.value = true;
+						const showHelpDocument = () => tutorialDialogVisible.value = true;
 
 						onMounted(() => {
 							keyword.value = getKeywordFromURL();
 							if (keyword.value) search();
 							fetchHotResources();
+							fetchTutorial();
 						});
 
-
 						return {
-							tutorialDialogVisible,
-							openTutorialDialog,
-							showHelpDocument,
+							// 搜索
 							keyword,
 							results,
 							loading,
-							hotResources,
 							search,
+							onKeyup,
+
+							// 热门资源
+							hotResources,
 							showResourceDetail,
-							sideMenuVisible,
+
+							// 页面控制
+			  		sideMenuVisible,
 							openSideMenu,
 							closeSideMenu,
+
+							// 提交需求
 							submitDialogVisible,
 							openSubmitDialog,
 							resourceRequest,
 							submitResourceRequest,
-							showHelpDocument,
-							onKeyup
+
+							// 教程
+							tutorialDialogVisible,
+			  		tutorialUrl,
+							openTutorialDialog,
+							showHelpDocument
 						};
 					},
 				});
@@ -407,5 +431,6 @@
 				app.use(ElementPlus);
 				app.mount("#app");
 			</script>
+
 	</body>
 </html>

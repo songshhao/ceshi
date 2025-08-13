@@ -10,8 +10,7 @@
 		<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 		<script src="https://unpkg.com/element-plus"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcanvas/3.0.0/qrcanvas.min.js"></script>
-		<link rel="stylesheet" type="text/css" href="search.css">
+		<link rel="stylesheet" type="text/css" href="css/search.css">
 	</head>
 	<body>
 		<div class="head-bg"></div>
@@ -100,20 +99,21 @@
 										<i class="fab fa-dropbox"></i> {{ item.source }}
 									</div>
 								</div>
-								<div class="result-actions">
-									<button class="action-btn copy-btn" @click="copyToClipboard(item.link)">
-										<i class="fas fa-share-alt"></i> 复制分享
-									</button>
-									<a class="action-btn visit-btn" :href="item.link" target="_blank">
-										<i class="fas fa-external-link-alt"></i> 立即访问
-									</a>
-								</div>
+								<button class="action-btn copy-btn" @click="copyToClipboard(item.link)">
+									<i class="fas fa-share-alt"></i> 复制分享
+								</button>
+								<a class="action-btn visit-btn" @click.prevent="visitLink(item.link)">
+									<i class="fas fa-external-link-alt"></i> 立即访问
+								</a>
+
+
 							</div>
-							<el-pagination v-if="totalPages > 1" background layout="prev, pager, next" :total="totalItems"
-								:page-size="pageSize" :current-page="currentPage" @current-change="handlePageChange">
+							<el-pagination v-if="totalPages > 1" background layout="prev, pager, next"
+								:total="totalItems" :page-size="pageSize" :current-page="currentPage"
+								@current-change="handlePageChange">
 							</el-pagination>
 						</div>
-						
+
 					</div>
 				</div>
 			</main>
@@ -149,110 +149,101 @@
 		</div>
 		<script>
 			const {
-				createApp,
-				ref,
-				reactive,
-				onMounted
+				createApp
 			} = Vue;
 			const {
 				ElMessage
-			} = ElementPlus; // **这句必须加**
+			} = ElementPlus;
+
 			const app = createApp({
-				setup() {
-					// 分类映射，前端显示名称 => 后端categoryCode
-					const categoryMap = {
-						'全部': '',
-						'短剧': '1',
-						'电影': '2',
-						'电视剧': '3',
-						'动漫': '4',
-						'综艺': '5'
+				data() {
+					return {
+						categoryMap: { // 分类映射（后续可以改成动态获取）
+							'全部': '',
+							'短剧': '1',
+							'电影': '2',
+							'电视剧': '3',
+							'动漫': '4',
+							'综艺': '5'
+						},
+						currentPage: 1, // 当前页
+						pageSize: 8, // 每页数量
+						totalItems: 0, // 总条数
+						totalPages: 0, // 总页数
+						keyword: '', // 搜索关键词
+						results: [], // 搜索结果
+						loading: false, // 加载状态
+						filters: { // 筛选条件
+							type: '全部',
+							sort: '相关度'
+						}
 					};
-					const currentPage = ref(1); // 当前页
-					const pageSize = ref(8); // 每页数量
-					const totalItems = ref(0); // 总数据量
+				},
 
-					const keyword = ref('');
-					const results = ref([]);
-					const loading = ref(false);
+				computed: {
+					// 如果需要可以加额外计算属性
+				},
 
-					// 当前筛选条件
-					const filters = reactive({
-						type: '全部', // 分类
-						sort: '相关度' // 排序
-					});
-
-					// 从 URL 解析关键词
-					const getKeywordFromURL = () => {
+				methods: {
+					getKeywordFromURL() {
 						const params = new URLSearchParams(window.location.search);
 						return params.get('keyword') || '';
-					};
+					},
 
-					// 搜索方法
-					const totalPages = ref(0);
-
-					const search = async (page = 1) => {
-						if (!keyword.value.trim()) {
+					async search(page = 1) {
+						if (!this.keyword.trim()) {
 							ElMessage.error('请输入搜索关键词');
 							return;
 						}
-						loading.value = true;
+						this.loading = true;
 						try {
-							currentPage.value = page;
+							this.currentPage = page;
 							const params = {
-								keyword: keyword.value,
+								keyword: this.keyword,
 								page: page - 1,
-								size: pageSize.value
+								size: this.pageSize
 							};
-							if (filters.type !== '全部') {
-								params.categoryId = categoryMap[filters.type];
+							if (this.filters.type !== '全部') {
+								params.categoryId = this.categoryMap[this.filters.type];
 							}
-							const res = await axios.get('http://172.20.10.5:8080/api/search', {
-								params
+							const res = await axios.get('http://192.168.1.25:8080/api/search', {
+								params,
+								withCredentials: true
 							});
 							if (res.data && res.data.code === 200) {
-								results.value = res.data.data.content || [];
-								totalItems.value = res.data.data.totalElements;
-								totalPages.value = Math.ceil(totalItems.value / pageSize.value);
+								this.results = res.data.data.content || [];
+								this.totalItems = res.data.data.totalElements;
+								this.totalPages = Math.ceil(this.totalItems / this.pageSize);
 							} else {
-								results.value = [];
-								totalItems.value = 0;
-								totalPages.value = 0;
+								this.results = [];
+								this.totalItems = 0;
+								this.totalPages = 0;
 								ElMessage.warning(res.data.message || '未找到相关资源');
 							}
 						} catch (error) {
 							console.error(error);
 							ElMessage.error('搜索失败，请稍后再试');
 						} finally {
-							loading.value = false;
+							this.loading = false;
 						}
-					};
-					const handlePageChange = (page) => {
-						search(page);
-					};
+					},
 
-					// 切换分类
-					const changeType = (type) => {
-						filters.type = type;
-						search();
-					};
+					handlePageChange(page) {
+						this.search(page);
+					},
 
-					// 切换排序
-					const changeSort = (sort) => {
-						filters.sort = sort;
-						search();
-					};
+					changeType(type) {
+						this.filters.type = type;
+						this.search();
+					},
 
-					// 初始化
-					onMounted(() => {
-						keyword.value = getKeywordFromURL();
-						if (keyword.value) {
-							search();
-						}
-					});
+					changeSort(sort) {
+						this.filters.sort = sort;
+						this.search();
+					},
 
-					// 复制到剪贴板示例（你之前写的）
-					const copyToClipboard = async (text) => {
+
+					async copyToClipboard(text) {
 						if (!navigator.clipboard) {
 							ElMessage.error("浏览器不支持剪贴板API");
 							return;
@@ -260,26 +251,45 @@
 						try {
 							await navigator.clipboard.writeText(text);
 							ElMessage.success("复制成功");
+							await fetch("http://192.168.1.25:8080/api/access/record", {
+								method: "POST",
+								headers: {
+									"Content-Type": "application/json"
+								},
+								body: JSON.stringify({
+									type: "copy",
+									link: text
+								})
+							});
 						} catch (e) {
 							ElMessage.error("复制失败");
 						}
-					};
+					},
 
-					return {
-						keyword,
-						results,
-						loading,
-						filters,
-						search,
-						changeType,
-						changeSort,
-						totalPages,
-						copyToClipboard,
-						totalItems,
-						pageSize,
-						currentPage,
-						handlePageChange
-					};
+					async visitLink(link) {
+						window.open(link, "_blank");
+						try {
+							await fetch("http://192.168.1.25:8080/api/access/record", {
+								method: "POST",
+								headers: {
+									"Content-Type": "application/json"
+								},
+								body: JSON.stringify({
+									type: "visit",
+									link
+								})
+							});
+						} catch (e) {
+							console.error("访问统计失败", e);
+						}
+					}
+				},
+
+				mounted() {
+					this.keyword = this.getKeywordFromURL();
+					if (this.keyword) {
+						this.search();
+					}
 				}
 			});
 

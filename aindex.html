@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<title>宋溪 - 网盘管理后台</title>
+		<!-- 引入Element Plus样式 -->
+		<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+		<!-- 引入Font Awesome -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+		<!-- 引入Vue 3 -->
+		<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+		<!-- 引入Element Plus -->
+		<script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+		<!-- 引入SheetJS库用于处理Excel文件 -->
+		<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+		<link rel="stylesheet" href="css/aindex.css">
+	</head>
+	<body>
+		<div id="app">
+			<!-- 移动端遮罩层 -->
+			<div class="mobile-mask" :class="{ 'active': isMaskActive }" @click="toggleMenu"></div>
+
+			<el-container>
+				<!-- 顶部导航栏 -->
+				<el-header>
+					<div class="menu-toggle" @click="toggleMenu">
+						<i class="fas fa-bars"></i>
+					</div>
+					<div class="logo">
+						<i class="fas fa-cloud"></i>
+						<span class="logo-text">宋溪 - 网盘管理后台</span>
+					</div>
+					<div class="user-info">
+						<span>{{ currentUser }}</span>
+						<el-dropdown>
+							<span class="el-dropdown-link user-avatar" @click.stop>
+								{{ currentUser ? currentUser.charAt(0) : '用' }}
+							</span>
+							<template #dropdown>
+								<el-dropdown-menu>
+									<el-dropdown-item @click="showSettingDialog = true">
+										<i class="fas fa-cog"></i> 个人设置
+									</el-dropdown-item>
+									<el-dropdown-item @click="logout">
+										<i class="fas fa-sign-out-alt"></i> 退出登录
+									</el-dropdown-item>
+								</el-dropdown-menu>
+							</template>
+						</el-dropdown>
+					</div>
+				</el-header>
+				<!-- 个人设置对话框 -->
+				<el-dialog title="个人设置" v-model="showSettingDialog" width="400px" :before-close="handleClose">
+					<el-form ref="settingForm" :model="form" :rules="rules" label-width="100px">
+						<el-form-item label="用户名" prop="username">
+							<el-input v-model="form.username" disabled></el-input>
+						</el-form-item>
+						<el-form-item label="原密码" prop="oldPassword">
+							<el-input type="password" v-model="form.oldPassword" placeholder="请输入原密码"></el-input>
+						</el-form-item>
+						<el-form-item label="新密码" prop="newPassword">
+							<el-input type="password" v-model="form.newPassword" placeholder="请输入新密码"></el-input>
+						</el-form-item>
+						<el-form-item label="确认密码" prop="confirmPassword">
+							<el-input type="password" v-model="form.confirmPassword" placeholder="请确认新密码"></el-input>
+						</el-form-item>
+					</el-form>
+
+					<template #footer>
+						<el-button @click="showSettingDialog = false">取消</el-button>
+						<el-button type="primary" @click="submitSetting">确定</el-button>
+					</template>
+				</el-dialog>
+
+				<el-container>
+					<!-- 侧边栏导航 -->
+					<el-aside :class="{ 'active': isMenuActive }">
+						<el-menu default-active="1" class="el-menu-vertical-demo" @select="handleMenuSelect">
+							<el-menu-item index="1">
+								<i class="fas fa-tachometer-alt"></i>
+								<span>控制台</span>
+							</el-menu-item>
+							<el-menu-item index="2">
+								<i class="fas fa-database"></i>
+								<span>资源管理</span>
+							</el-menu-item>
+							<el-menu-item index="3">
+								<i class="fas fa-folder-open"></i>
+								<span>分类管理</span>
+							</el-menu-item>
+							<el-menu-item index="4">
+								<i class="fas fa-chart-bar"></i>
+								<span>访问统计</span>
+							</el-menu-item>
+							<el-menu-item index="5">
+								<i class="fas fa-comment-dots"></i>
+								<span>用户建议</span>
+							</el-menu-item>
+							<el-menu-item index="6">
+								<i class="fas fa-book"></i>
+								<span>使用教程</span>
+							</el-menu-item>
+
+							
+						</el-menu>
+
+					</el-aside>
+
+					<!-- 主内容区 -->
+					<el-main>
+						<!-- 1. 控制台页面 -->
+						<div v-if="activePage === '1'" class="fade-in">
+							<h2 class="page-title">控制台</h2>
+							<div class="card-container">
+								<el-row :gutter="15">
+									<el-col :span="6">
+										<div class="el-card" style="text-align: center; padding: 15px;">
+											<div class="el-card__body">
+												<p style="color: #666; font-size: 13px;">资源总数</p>
+												<p style="font-size: 22px; font-weight: bold; margin: 8px 0;">
+													{{ resourceStats.total }}
+												</p>
+											</div>
+										</div>
+									</el-col>
+									<el-col :span="6">
+										<div class="el-card" style="text-align: center; padding: 15px;">
+											<div class="el-card__body">
+												<p style="color: #666; font-size: 13px;">分类数量</p>
+												<p style="font-size: 22px; font-weight: bold; margin: 8px 0;">
+													{{ categoryStats.total }}
+												</p>
+											</div>
+										</div>
+									</el-col>
+									<el-col :span="6">
+										<div class="el-card" style="text-align: center; padding: 15px;">
+											<div class="el-card__body">
+												<p style="color: #666; font-size: 13px;">待处理建议</p>
+												<p style="font-size: 22px; font-weight: bold; margin: 8px 0;">
+													{{ suggestionStats.pending }}
+												</p>
+											</div>
+										</div>
+									</el-col>
+									<el-col :span="6">
+										<div class="el-card" style="text-align: center; padding: 15px;">
+											<div class="el-card__body">
+												<p style="color: #666; font-size: 13px;">热门资源</p>
+												<p style="font-size: 22px; font-weight: bold; margin: 8px 0;">
+													{{ resourceStats.hot }}
+												</p>
+												<!-- <p style="color: #165DFF; font-size: 12px;">本周热门: {{ topHotResource }}
+												</p> -->
+											</div>
+										</div>
+									</el-col>
+								</el-row>
+							</div>
+
+							<div class="card-container">
+								<h3 style="font-size: 16px; margin-bottom: 10px;">最近资源统计</h3>
+								<el-table :data="recentResources" border size="mini">
+									<el-table-column prop="title" label="资源标题" width="200"></el-table-column>
+									<el-table-column label="分类">
+										<template #default="scope">
+											{{ scope.row.category.name }}
+										</template>
+									</el-table-column>
+									<el-table-column label="更新日期">
+										<template #default="scope">
+											{{ scope.row.updatedAt }}
+										</template>
+									</el-table-column>
+									<el-table-column prop="isHot" label="是否热门">
+										<template #default="scope">
+											<el-tag v-if="scope.row.isHot" type="success" size="mini">热门</el-tag>
+											<el-tag v-else type="info" size="mini">普通</el-tag>
+										</template>
+									</el-table-column>
+								</el-table>
+							</div>
+						</div>
+
+						<!-- 2. 资源管理页面 -->
+						<div v-if="activePage === '2'" class="fade-in">
+							<h2 class="page-title">资源管理</h2>
+							<div class="card-container">
+								<div class="search-bar">
+									<div>
+										<el-input v-model="resourceSearch" placeholder="搜索资源标题" clearable>
+											<template #append>
+												<el-button @click="searchResources" icon="Search" size="small">
+												</el-button>
+											</template>
+										</el-input>
+										<el-select v-model="resourceCategoryFilter" @change="handleFilterChange"
+											placeholder="选择分类" style="margin-top: 10px;">
+											<el-option label="全部" value=""></el-option>
+											<el-option v-for="category in categories" :key="category.id"
+												:label="category.name" :value="category.id"></el-option>
+										</el-select>
+										<el-select v-model="resourceHotFilter" @change="handleFilterChange"
+											placeholder="是否热门" style="margin-top: 10px;">
+											<el-option label="全部" value=""></el-option>
+											<el-option label="热门" value="true"></el-option>
+											<el-option label="普通" value="false"></el-option>
+										</el-select>
+									</div>
+									<div class="operation-buttons">
+										<el-button type="danger" :disabled="selectedResources.length === 0"
+											@click="confirmBatchDelete" size="small">
+											<i class="fas fa-trash"></i> 批量删除
+										</el-button>
+										<el-button type="success" @click="exportResources" size="small">
+											<i class="fas fa-file-export"></i> 导出Excel
+										</el-button>
+										<el-button type="warning" @click="showImportResourceDialog" size="small">
+											<i class="fas fa-file-import"></i> 导入Excel
+										</el-button>
+										<el-button type="primary" @click="showAddResourceDialog" size="small">
+											<i class="fas fa-plus"></i> 添加资源
+										</el-button>
+									</div>
+								</div>
+
+								<!-- 资源表格 -->
+								<el-table :data="resources" border size="mini"
+									@selection-change="handleResourceSelectionChange" ref="resourceTable">
+
+									<el-table-column type="selection" width="55"></el-table-column>
+
+									<el-table-column prop="id" label="ID" width="60"></el-table-column>
+
+									<el-table-column prop="title" label="资源标题" width="180"></el-table-column>
+
+									<el-table-column label="资源分类" width="120">
+										<template #default="scope">
+											{{ scope.row.category?.name || '无分类' }}
+										</template>
+									</el-table-column>
+
+									<el-table-column prop="link" label="资源链接" width="250">
+										<template #default="scope">
+											<a :href="scope.row.link" target="_blank"
+												style="text-decoration: none; color: #165DFF;">
+												{{ scope.row.link.length > 30 ? scope.row.link.substring(0, 30) + '...' : scope.row.link }}
+											</a>
+										</template>
+									</el-table-column>
+
+									<el-table-column prop="source" label="资源来源" width="120"></el-table-column>
+
+									<el-table-column prop="isHot" label="是否热门" width="100">
+										<template #default="scope">
+											<el-tag v-if="scope.row.isHot" type="success" size="mini">热门</el-tag>
+											<el-tag v-else type="info" size="mini">普通</el-tag>
+										</template>
+									</el-table-column>
+
+									<el-table-column prop="updatedAt" label="更新日期" width="120" sortable>
+										<template #default="scope">
+											{{ scope.row.updatedAt || '无' }}
+										</template>
+									</el-table-column>
+
+									<el-table-column label="操作" width="240">
+										<template #default="scope">
+											<el-button size="mini" @click="showViewResourceDialog(scope.row)">查看
+											</el-button>
+											<el-button size="mini" type="primary"
+												@click="showEditResourceDialog(scope.row)">编辑</el-button>
+											<el-button size="mini" type="danger"
+												@click="confirmDeleteResource(scope.row.id)">删除</el-button>
+										</template>
+									</el-table-column>
+								</el-table>
+
+
+								<div style="margin-top: 10px; text-align: right;">
+									<el-pagination :current-page="resourceCurrentPage" :page-size="resourcePageSize"
+										:total="resourceTotal" :page-sizes="[5, 10, 20]"
+										layout="total, sizes, prev, pager, next" @size-change="handleResourceSizeChange"
+										@current-change="handleResourceCurrentChange" small>
+									</el-pagination>
+
+
+
+								</div>
+							</div>
+						</div>
+
+						<!-- 3. 分类管理页面 -->
+						<div v-if="activePage === '3'" class="fade-in">
+							<h2 class="page-title">分类管理</h2>
+							<div class="card-container">
+								<div class="search-bar">
+									<div>
+										<el-input v-model="categorySearch" placeholder="搜索分类名称或代码" clearable>
+											<template #append>
+												<el-button @click="searchCategories" icon="Search" size="small">
+												</el-button>
+											</template>
+										</el-input>
+									</div>
+									<div class="operation-buttons">
+										<el-button type="primary" @click="showAddCategoryDialog" size="small">
+											<i class="fas fa-plus"></i> 添加分类
+										</el-button>
+									</div>
+								</div>
+
+								<el-table :data="filteredCategories" border size="mini">
+									<el-table-column label="序号" width="80">
+										<template #default="{ row }">
+											{{ row.id }}
+										</template>
+									</el-table-column>
+									<el-table-column prop="code" label="类别代码" width="120"></el-table-column>
+									<el-table-column prop="name" label="类别名称" width="150"></el-table-column>
+									<el-table-column prop="resourceCount" label="资源数量" width="100"></el-table-column>
+									<el-table-column label="操作" width="160">
+										<template #default="scope">
+											<el-button size="mini" type="primary"
+												@click="showEditCategoryDialog(scope.row)">编辑</el-button>
+											<el-button size="mini" type="danger"
+												@click="confirmDeleteCategory(scope.row.id)">删除</el-button>
+										</template>
+									</el-table-column>
+								</el-table>
+
+								<div style="margin-top: 10px; text-align: right;">
+									<el-pagination :current-page="categoryCurrentPage" :page-size="categoryPageSize"
+										:total="categoryTotal" @size-change="handleCategorySizeChange"
+										@current-change="handleCategoryCurrentChange"
+										layout="total, sizes, prev, pager, next" :page-sizes="[5, 10, 20]" small>
+									</el-pagination>
+
+								</div>
+							</div>
+						</div>
+						<!-- 4.统计访问页面 -->
+						<div v-if="activePage === '4'" class="fade-in">
+							<h2 class="page-title">访问统计</h2>
+							<el-table :data="accessData" border size="mini">
+								<el-table-column type="index" label="序号" width="70"></el-table-column>
+								<el-table-column prop="type" label="类型" width="100"></el-table-column>
+								<el-table-column prop="ip" label="IP" width="160"></el-table-column>
+								<el-table-column prop="device" label="设备" width="100"></el-table-column>
+								<el-table-column prop="link" label="链接" width="400"></el-table-column>
+								<el-table-column prop="createdAt" label="时间" width="160"></el-table-column>
+							</el-table>
+
+							<el-button type="primary" @click="exportExcel('realtime')">实时导出</el-button>
+							<el-button type="warning" @click="deleteAll">删除所有</el-button>
+						</div>
+						<!-- 5. 用户建议页面 -->
+						<div v-if="activePage === '5'" class="fade-in">
+							<h2 class="page-title">用户建议</h2>
+							<div class="card-container">
+								<div class="search-bar">
+									<div>
+										<el-input v-model="suggestionSearch" placeholder="搜索建议内容" clearable>
+											<template #append>
+												<el-button @click="searchSuggestions" icon="Search" size="small">
+												</el-button>
+											</template>
+										</el-input>
+										<el-select v-model="suggestionStatusFilter" placeholder="处理状态"
+											style="margin-top: 10px;">
+											<el-option label="全部" value=""></el-option>
+											<el-option label="待处理" value="pending"></el-option>
+											<el-option label="已处理" value="processed"></el-option>
+										</el-select>
+									</div>
+								</div>
+
+								<el-table :data="filteredSuggestions" border size="mini">
+									<el-table-column type="index" label="序号" width="50"></el-table-column>
+									<el-table-column prop="content" label="建议内容" width="500"></el-table-column>
+									<el-table-column prop="status" label="处理状态" width="100">
+										<template #default="scope">
+											<span class="status-tag status-pending"
+												v-if="scope.row.status === 'pending'">待处理</span>
+											<span class="status-tag status-processed"
+												v-if="scope.row.status === 'processed'">已处理</span>
+										</template>
+									</el-table-column>
+									<el-table-column prop="createDate" label="创建日期" width="120"></el-table-column>
+									<el-table-column label="操作" width="230">
+										<template #default="scope">
+											<el-button size="mini" @click="showViewSuggestionDialog(scope.row)">查看
+											</el-button>
+											<el-button size="mini" type="primary"
+												@click="showProcessSuggestionDialog(scope.row)"
+												v-if="scope.row.status === 'pending'">
+												处理
+											</el-button>
+											<el-button size="mini" type="danger"
+												@click="confirmDeleteSuggestion(scope.row.id)">删除</el-button>
+										</template>
+									</el-table-column>
+								</el-table>
+
+								<div style="margin-top: 10px; text-align: right;">
+									<el-pagination @size-change="handleSuggestionSizeChange"
+										@current-change="handleSuggestionCurrentChange"
+										:current-page="suggestionCurrentPage" :page-sizes="[5, 10, 20]"
+										:page-size="suggestionPageSize" layout="total, sizes, prev, pager, next"
+										:total="suggestionTotal" small>
+									</el-pagination>
+
+								</div>
+							</div>
+						</div>
+
+						<!-- 6. 使用教程页面 -->
+						<div v-if="activePage === '6'" class="fade-in">
+							<h2 class="page-title">使用教程</h2>
+							<div class="card-container">
+								<el-table :data="tutorials" border size="mini">
+									<el-table-column type="index" label="序号" width="70"></el-table-column>
+									<el-table-column prop="link" label="教程链接" width="600">
+										<template #default="scope">
+											<a :href="scope.row.link" target="_blank"
+												style="word-break: break-all;">{{ scope.row.url }}</a>
+										</template>
+									</el-table-column>
+									<el-table-column prop="updateTime" label="更新时间" width="260">
+										<template #default="scope">
+											{{ scope.row.updatedAt || '无' }}
+										</template>
+									</el-table-column>
+									<el-table-column label="操作" width="100">
+										<template #default="scope">
+											<el-button size="mini" type="primary"
+												@click="showEditTutorialDialog(scope.row)">编辑</el-button>
+										</template>
+									</el-table-column>
+								</el-table>
+
+
+							</div>
+						</div>
+
+
+					</el-main>
+				</el-container>
+			</el-container>
+
+			<!-- 所有对话框 -->
+			<!-- 添加资源对话框 -->
+			<el-dialog title="添加资源" v-model="addResourceDialogVisible" width="90%" @close="resetResourceForm">
+				<el-form :model="resourceForm" label-width="100px" size="small">
+					<el-form-item label="资源标题" prop="title"
+						:rules="[{ required: true, message: '请输入资源标题', trigger: 'blur' }]">
+						<el-input v-model="resourceForm.title"></el-input>
+					</el-form-item>
+					<el-form-item label="资源分类" prop="categoryId"
+						:rules="[{ required: true, message: '请选择资源分类', trigger: 'change' }]">
+						<el-select v-model="resourceForm.categoryId" placeholder="请选择">
+							<el-option v-for="category in categories" :key="category.id" :label="category.name"
+								:value="category.id"></el-option>
+						</el-select>
+					</el-form-item>
+					<el-form-item label="更新日期" prop="publishDate"
+						:rules="[{ required: true, message: '请选择更新日期', trigger: 'change' }]">
+						<el-date-picker v-model="resourceForm.releaseDate" type="date" placeholder="选择日期">
+						</el-date-picker>
+					</el-form-item>
+					<el-form-item label="资源来源" prop="source">
+						<el-input v-model="resourceForm.source"></el-input>
+					</el-form-item>
+					<el-form-item label="资源链接" prop="link"
+						:rules="[{ required: true, message: '请输入资源链接', trigger: 'blur' }]">
+						<el-input v-model="resourceForm.link"></el-input>
+					</el-form-item>
+					<el-form-item label="是否热门">
+						<el-switch v-model="resourceForm.isHot"></el-switch>
+					</el-form-item>
+				</el-form>
+				<template #footer>
+					<el-button @click="addResourceDialogVisible = false" size="small">取消</el-button>
+					<el-button type="primary" @click="saveResource" size="small">保存</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 编辑资源对话框 -->
+			<el-dialog title="编辑资源" v-model="editResourceDialogVisible" width="90%" @close="resetResourceForm">
+				<el-form :model="resourceForm" label-width="100px" size="small">
+
+					<el-form-item label="资源标题" prop="title"
+						:rules="[{ required: true, message: '请输入资源标题', trigger: 'blur' }]">
+						<el-input v-model="resourceForm.title"></el-input>
+					</el-form-item>
+					<el-form-item label="资源分类" prop="categoryId"
+						:rules="[{ required: true, message: '请选择资源分类', trigger: 'change' }]">
+						<el-select v-model="resourceForm.categoryId" placeholder="请选择">
+							<el-option v-for="category in categories" :key="category.id" :label="category.name"
+								:value="category.id"></el-option>
+						</el-select>
+					</el-form-item>
+					<el-form-item label="更新日期" prop="updatedAt"
+						:rules="[{ required: true, message: '请选择更新日期', trigger: 'change' }]">
+						<el-date-picker v-model="resourceForm.updatedAt" type="date" placeholder="选择日期">
+						</el-date-picker>
+					</el-form-item>
+					<el-form-item label="资源来源" prop="source">
+						<el-input v-model="resourceForm.source"></el-input>
+					</el-form-item>
+					<el-form-item label="资源链接" prop="link"
+						:rules="[{ required: true, message: '请输入资源链接', trigger: 'blur' }]">
+						<el-input v-model="resourceForm.link"></el-input>
+					</el-form-item>
+					<el-form-item label="是否热门">
+						<el-switch v-model="resourceForm.isHot"></el-switch>
+					</el-form-item>
+				</el-form>
+				<template #footer>
+					<el-button @click="editResourceDialogVisible = false" size="small">取消</el-button>
+					<el-button type="primary" @click="updateResource" size="small">更新</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 查看资源对话框 -->
+			<el-dialog title="查看资源" v-model="viewResourceDialogVisible" width="90%">
+				<el-descriptions column="1" border size="small">
+					<el-descriptions-item label="资源ID">{{ viewResourceData.id }}</el-descriptions-item>
+					<el-descriptions-item label="资源标题">{{ viewResourceData.title }}</el-descriptions-item>
+					<el-descriptions-item label="资源分类">{{ viewResourceData.category?.name || '无分类' }}
+					</el-descriptions-item>
+					<el-descriptions-item label="发布日期">{{ viewResourceData.releaseDate }}</el-descriptions-item>
+					<el-descriptions-item label="资源来源">{{ viewResourceData.source }}</el-descriptions-item>
+					<el-descriptions-item label="资源链接">
+						<a :href="viewResourceData.link" target="_blank">{{ viewResourceData.link }}</a>
+					</el-descriptions-item>
+					<el-descriptions-item label="是否热门">
+						<el-tag v-if="viewResourceData.isHot" type="success" size="mini">热门</el-tag>
+						<el-tag v-else type="info" size="mini">普通</el-tag>
+					</el-descriptions-item>
+					<el-descriptions-item label="创建时间">{{ viewResourceData.createdAt }}</el-descriptions-item>
+					<el-descriptions-item label="更新时间">{{ viewResourceData.updatedAt }}</el-descriptions-item>
+				</el-descriptions>
+				<template #footer>
+					<el-button @click="viewResourceDialogVisible = false" size="small">关闭</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 导入资源对话框 -->
+			<el-dialog title="批量导入资源" v-model="importResourceDialogVisible" width="90%" @close="resetImportForm">
+				<div>
+					<p style="font-size: 13px;">请上传包含资源信息的Excel文件进行批量导入。支持.xlsx和.xls格式。</p>
+
+					<div class="upload-area" @click="triggerFileUpload">
+						<input type="file" ref="fileInput" style="display: none" accept=".xlsx,.xls"
+							@change="handleFileUpload">
+						<div class="upload-icon">
+							<i class="fas fa-cloud-upload-alt"></i>
+						</div>
+						<p>点击或拖拽文件到此处上传</p>
+						<p style="color: #666; font-size: 12px;">支持 .xlsx, .xls 格式</p>
+					</div>
+
+					<div v-if="importProgress > 0 && importProgress < 100" class="import-progress">
+						<el-progress :percentage="importProgress" stroke-width="6"></el-progress>
+						<p style="text-align: center; margin-top: 10px; font-size: 13px;">正在导入: {{ importStatusText }}
+						</p>
+					</div>
+
+					<div v-if="importSuccessCount > 0 || importErrorCount > 0" class="import-progress">
+						<p style="margin-top: 15px; font-size: 13px;">
+							{{ importErrorCount > 0 ? '导入失败' : `导入完成: 成功 ${importSuccessCount} 条，失败 ${importErrorCount} 条` }}
+						</p>
+						<div v-if="importErrors.length > 0">
+							<p style="color: #f56c6c; margin-top: 10px; font-size: 13px;">错误信息:</p>
+							<el-collapse>
+								<el-collapse-item title="查看详细错误" name="1">
+									<div v-for="(error, index) in importErrors" :key="index"
+										style="color: #f56c6c; margin-bottom: 5px; font-size: 12px;">
+										{{ index + 1 }}. {{ error }}
+									</div>
+								</el-collapse-item>
+							</el-collapse>
+						</div>
+					</div>
+
+
+					<div class="import-template">
+						<el-button type="text" @click="downloadImportTemplate"
+							style="padding: 0; color: #165DFF; font-size: 13px;">
+							<i class="fas fa-download"></i> 下载导入模板
+						</el-button>
+						<span style="margin-left: 10px; font-size: 12px;">模板包含正确的格式和示例数据</span>
+					</div>
+				</div>
+				<template #footer>
+					<el-button @click="importResourceDialogVisible = false" size="small">关闭</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 其他对话框保持不变 -->
+			<!-- 添加分类对话框 -->
+			<el-dialog title="添加分类" v-model="addCategoryDialogVisible" width="90%" @close="resetCategoryForm">
+				<el-form :model="categoryForm" label-width="100px" size="small">
+					<el-form-item label="类别代码" prop="code"
+						:rules="[{ required: true, message: '请输入类别代码', trigger: 'blur' }]">
+						<el-input v-model="categoryForm.code"></el-input>
+					</el-form-item>
+					<el-form-item label="类别名称" prop="name"
+						:rules="[{ required: true, message: '请输入类别名称', trigger: 'blur' }]">
+						<el-input v-model="categoryForm.name"></el-input>
+					</el-form-item>
+				</el-form>
+				<template #footer>
+					<el-button @click="addCategoryDialogVisible = false" size="small">取消</el-button>
+					<el-button type="primary" @click="saveCategory" size="small">保存</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 编辑分类对话框 -->
+			<el-dialog title="编辑分类" v-model="editCategoryDialogVisible" width="90%" @close="resetCategoryForm">
+				<el-form :model="categoryForm" label-width="100px" size="small">
+					<el-form-item label="类别代码" prop="code"
+						:rules="[{ required: true, message: '请输入类别代码', trigger: 'blur' }]">
+						<el-input v-model="categoryForm.code"></el-input>
+					</el-form-item>
+					<el-form-item label="类别名称" prop="name"
+						:rules="[{ required: true, message: '请输入类别名称', trigger: 'blur' }]">
+						<el-input v-model="categoryForm.name"></el-input>
+					</el-form-item>
+				</el-form>
+				<template #footer>
+					<el-button @click="editCategoryDialogVisible = false" size="small">取消</el-button>
+					<el-button type="primary" @click="updateCategory" size="small">更新</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 查看建议对话框 -->
+			<el-dialog title="查看建议" v-model="viewSuggestionDialogVisible" width="90%">
+				<el-descriptions column="1" border size="small">
+					<el-descriptions-item label="建议内容">{{ viewSuggestionData.content }}</el-descriptions-item>
+					<el-descriptions-item label="处理状态">
+						<span class="status-tag status-pending"
+							v-if="viewSuggestionData.status === 'pending'">待处理</span>
+						<span class="status-tag status-processed"
+							v-if="viewSuggestionData.status === 'processed'">已处理</span>
+					</el-descriptions-item>
+					<el-descriptions-item label="处理备注" v-if="viewSuggestionData.status === 'processed'">
+						{{ viewSuggestionData.processNote || '无' }}
+					</el-descriptions-item>
+					<el-descriptions-item label="创建日期">{{ viewSuggestionData.createDate }}</el-descriptions-item>
+					<el-descriptions-item label="处理时间" v-if="viewSuggestionData.status === 'processed'">
+						{{ viewSuggestionData.processTime }}
+					</el-descriptions-item>
+				</el-descriptions>
+				<template #footer>
+					<el-button @click="viewSuggestionDialogVisible = false" size="small">关闭</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 处理建议对话框 -->
+			<el-dialog title="处理建议" v-model="processSuggestionDialogVisible" width="90%">
+				<el-form :model="suggestionForm" label-width="100px" size="small">
+					<el-form-item label="建议内容">
+						<el-input v-model="suggestionForm.content" disabled type="textarea" :rows="3"></el-input>
+					</el-form-item>
+					<el-form-item label="处理备注" prop="processNote">
+						<el-input v-model="suggestionForm.processNote" type="textarea" :rows="4"
+							placeholder="请输入处理备注..."></el-input>
+					</el-form-item>
+				</el-form>
+				<template #footer>
+					<el-button @click="processSuggestionDialogVisible = false" size="small">取消</el-button>
+					<el-button type="primary" @click="processSuggestion" size="small">标记为已处理</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 编辑教程对话框 -->
+			<el-dialog title="编辑教程链接" v-model="editTutorialDialogVisible" width="90%" @close="resetTutorialForm">
+				<el-form :model="tutorialForm" label-width="100px" size="small">
+					<el-form-item label="教程链接" prop="link"
+						:rules="[{ required: true, message: '请输入教程链接', trigger: 'blur' }]">
+						<el-input v-model="tutorialForm.link" placeholder="http://"></el-input>
+					</el-form-item>
+				</el-form>
+				<template #footer>
+					<el-button @click="editTutorialDialogVisible = false" size="small">取消</el-button>
+					<el-button type="primary" @click="updateTutorial" size="small">更新</el-button>
+				</template>
+			</el-dialog>
+
+			<!-- 确认删除对话框 -->
+			<el-dialog title="确认删除" v-model="confirmDeleteDialogVisible" width="90%">
+				<p style="font-size: 14px;">确定要删除这条记录吗？此操作不可撤销。</p>
+				<template #footer>
+					<el-button @click="confirmDeleteDialogVisible = false" size="small">取消</el-button>
+					<el-button type="danger" @click="deleteConfirmed" size="small">确认删除</el-button>
+				</template>
+			</el-dialog>
+		</div>
+
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				const {
+					createApp
+				} = Vue;
+				const {
+					ElMessage,
+					ElMessageBox
+				} = ElementPlus;
+
+				createApp({
+					data() {
+						return {
+							// 移动端菜单控制
+							isMenuActive: false,
+							isMaskActive: false,
+							//统计访问
+							// activePage: '6',  
+							accessData: [],
+							// 当前用户
+							currentUser: "管理员",
+
+							form: {
+								username: "", // 当前登录用户
+								oldPassword: "",
+								newPassword: "",
+								confirmPassword: ""
+							},
+							showSettingDialog: false,
+							form: {
+								username: "", // 当前用户名
+								oldPassword: "",
+								newPassword: "",
+								confirmPassword: ""
+							},
+							rules: {
+								oldPassword: [{
+									required: true,
+									message: '请输入原密码',
+									trigger: 'blur'
+								}],
+								newPassword: [{
+									required: true,
+									message: '请输入新密码',
+									trigger: 'blur'
+								}],
+								confirmPassword: [{
+										required: true,
+										message: '请确认新密码',
+										trigger: 'blur'
+									},
+									{
+										validator: (rule, value, callback) => {
+											if (value !== this.form.newPassword) {
+												callback(new Error('两次输入的密码不一致'));
+											} else {
+												callback();
+											}
+										},
+										trigger: 'blur'
+									}
+								]
+							},
+							// 当前激活的页面
+							activePage: "1",
+
+							// 数据初始化（已去除假数据，实际项目中通过API从后端获取）
+							resources: [],
+							categories: [],
+							suggestions: [],
+							tutorials: [],
+
+							// 控制台统计数据（实际项目中从后端获取）
+							resourceStats: {
+								total: 0,
+								hot: 0
+							},
+							categoryStats: {
+								total: 0
+							},
+							suggestionStats: {
+								pending: 0
+							},
+							topHotResource: "",
+							recentResources: [],
+
+							// 搜索和筛选条件
+							resourceSearch: "",
+							resourceCategoryFilter: "",
+							resourceHotFilter: "",
+							categorySearch: "",
+							suggestionSearch: "",
+							suggestionStatusFilter: "",
+
+							// 分页参数
+							resourceCurrentPage: 1,
+							resourcePageSize: 10,
+							resourceTotal: 0,
+							categoryCurrentPage: 1,
+							categoryPageSize: 10,
+							suggestionCurrentPage: 1,
+							suggestionPageSize: 10,
+							suggestionTotal: 0,
+
+							// 对话框显示控制
+							addResourceDialogVisible: false,
+							editResourceDialogVisible: false,
+							viewResourceDialogVisible: false,
+							importResourceDialogVisible: false,
+							addCategoryDialogVisible: false,
+							editCategoryDialogVisible: false,
+							viewSuggestionDialogVisible: false,
+							processSuggestionDialogVisible: false,
+							addTutorialDialogVisible: false,
+							editTutorialDialogVisible: false,
+							confirmDeleteDialogVisible: false,
+							//选中的资源组，用于批量删除
+							selectedResources: [],
+							// 表单数据
+							resourceForm: {
+								id: null,
+								title: "",
+								categoryId: "",
+								publishDate: "",
+								releaseDate: '',
+								updatedAt: "",
+								source: "",
+								link: "",
+								isHot: false
+							},
+							categoryForm: {
+								id: null,
+								code: "",
+								name: ""
+							},
+							suggestionForm: {
+								id: null,
+								content: "",
+								processNote: ""
+							},
+							tutorialForm: {
+								id: null,
+								link: ""
+							},
+
+							// 查看数据
+							viewResourceData: {},
+							viewSuggestionData: {},
+
+							// 待删除的ID
+							// 待删除的ID
+							deleteId: null,
+							deleteType: null,
+
+							// 导入相关变量
+							importProgress: 0,
+							importStatusText: "",
+							importSuccessCount: 0,
+							importErrorCount: 0,
+							importErrors: []
+						};
+					},
+					computed: {
+						// 分类管理 - 筛选逻辑
+						filteredCategories() {
+							return this.categories.filter(cat => {
+								const search = this.categorySearch.toLowerCase();
+								return cat.name.toLowerCase().includes(search) || cat.code.toLowerCase()
+									.includes(search);
+							});
+						},
+
+						// 用户建议 - 筛选逻辑
+						filteredSuggestions() {
+							// 前端搜索 + 状态过滤（可选，数据量小可用）
+							return this.suggestions.filter(sug => {
+								const matchesSearch = sug.content.toLowerCase().includes(this
+									.suggestionSearch.toLowerCase());
+								const matchesStatus = !this.suggestionStatusFilter || sug.status === this
+									.suggestionStatusFilter;
+								return matchesSearch && matchesStatus;
+							});
+						},
+						// 资源排序逻辑：先按热门程度，再按发布日期
+						sortedResources() {
+							return this.filteredResources.sort((a, b) => {
+								// 先比较热门程度（true在前）
+								if (a.isHot && !b.isHot) return -1;
+								if (!a.isHot && b.isHot) return 1;
+
+								// 热门程度相同则比较发布日期（最新在前）
+								return new Date(b.updatedAt) - new Date(a.updatedAt);
+							});
+						},
+						// 资源筛选逻辑
+						filteredResources() {
+							return this.resources.filter(res => {
+								const matchesSearch = res.title.toLowerCase().includes(this
+									.resourceSearch.toLowerCase());
+								const matchesCategory = !this.resourceCategoryFilter || res.category
+									?.id === parseInt(this.resourceCategoryFilter);
+								const matchesHot = !this.resourceHotFilter || (res.isHot === (this
+									.resourceHotFilter === 'true'));
+								return matchesSearch && matchesCategory && matchesHot;
+							});
+						}
+
+					},
+					methods: {
+						async loadAccessData() {
+							try {
+								const res = await fetch("http://localhost:8080/api/access/list");
+								const data = await res.json();
+								this.accessData = Array.isArray(data) ? data : []; // 确保是数组
+							} catch (e) {
+								console.error("加载访问数据失败", e);
+								this.accessData = [];
+							}
+						},
+						exportExcel(realtime) {
+							window.open(`http://localhost:8080/api/access/export?realtime=${realtime}`);
+						},
+						async deleteAll() {
+							try {
+								await fetch("http://localhost:8080/api/access/delete-all", {
+									method: "DELETE"
+								});
+								ElMessage.success("已删除");
+								this.loadAccessData(); // 删除后重新加载
+							} catch (e) {
+								console.error("删除失败", e);
+								ElMessage.error("删除失败");
+							}
+						},
+
+
+
+						//修改个人设置
+						handleClose(done) {
+							// 关闭弹窗前重置表单
+							this.$refs.settingForm.resetFields();
+							done();
+						},
+						async submitSetting() {
+							// 验证表单
+							this.$refs.settingForm.validate(async (valid) => {
+								if (!valid) return;
+
+								try {
+									const response = await fetch(
+										"http://localhost:8080/api/admin/change-password", {
+											method: "POST",
+											headers: {
+												"Content-Type": "application/json",
+												"Authorization": "Bearer " + localStorage
+													.getItem("token")
+											},
+											body: JSON.stringify({
+												username: this.form.username,
+												oldPassword: this.form.oldPassword,
+												newPassword: this.form.newPassword
+											})
+										});
+
+									const data = await response.json();
+									if (data.code === 200) {
+										ElMessage.success(data.message);
+										this.showSettingDialog = false;
+										this.$refs.settingForm.resetFields();
+									} else {
+										ElMessage.error(data.message);
+									}
+								} catch (error) {
+									ElMessage.error("修改密码失败: " + error.message);
+								}
+							}); // ✅ 这里闭合 validate 回调
+						},
+
+						// 页面初始化时加载数据（实际项目中通过API获取）
+						async initData() {
+							// 模拟API请求
+							await this.fetchResourcesPage();
+							await this.fetchCategories();
+							await this.fetchSuggestions();
+							await this.fetchTutorials();
+							await this.fetchDashboardStats();
+						},
+						async fetchDashboardStats() {
+							try {
+								const response = await fetch(
+									"http://localhost:8080/api/dashboard/stats");
+								if (!response.ok) {
+									throw new Error(`HTTP 错误 ${response.status}`);
+								}
+								const resData = await response.json();
+								if (resData.code === 200 && resData.data) {
+									const data = resData.data;
+									this.resourceStats.total = data.resourceTotal;
+									this.categoryStats.total = data.categoryTotal;
+									this.suggestionStats.pending = data.suggestionPending;
+									this.topHotResource = data.topHotTitle;
+									this.resourceStats.hot = data.hot;
+
+									this.recentResources = data.recentResourcesList;
+								} else {
+									ElMessage.error(resData.message || "获取控制台统计失败");
+								}
+							} catch (error) {
+								console.error(error);
+								ElMessage.error("获取控制台统计失败: " + error.message);
+							}
+						},
+						async fetchTutorials() {
+							try {
+								const res = await fetch(
+									"http://localhost:8080/api/tutorial");
+								const data = await res.json();
+								if (data.code === 200) {
+									this.tutorials = data.data; // 假设返回列表在 data.data
+								} else {
+									this.$message.warning(data.message || "获取教程列表失败");
+								}
+							} catch (error) {
+								console.error(error);
+								this.$message.error("获取教程列表失败: " + error.message);
+							}
+
+						},
+
+						async fetchCategories(page = 1, size = this.categoryPageSize) {
+							try {
+								const response = await fetch(
+									`http://localhost:8080/api/categories?page=${page}&size=${size}`
+								);
+								if (!response.ok) throw new Error("网络错误，状态码：" +
+									response.status);
+
+								const resData = await response.json();
+
+								if (resData.code === 200 && resData.data) {
+									this.categories = resData.data.categories;
+									this.categoryTotal = resData.data.total;
+									this.categoryCurrentPage = resData.data.page;
+									this.categoryPageSize = resData.data.size;
+								} else {
+									ElMessage.error("获取分类失败: " + (resData.message ||
+										"返回数据格式错误"));
+								}
+							} catch (error) {
+								ElMessage.error("请求分类数据出错: " + error.message);
+								console.error(error);
+							}
+						},
+						//类型分页有关
+						handleCategorySizeChange(newSize) {
+							this.categoryPageSize = newSize;
+							this.fetchCategories(this.categoryCurrentPage, newSize);
+						},
+						handleCategoryCurrentChange(newPage) {
+							this.categoryCurrentPage = newPage;
+							this.fetchCategories(newPage, this.categoryPageSize);
+						},
+						//新增分类
+						async saveCategory() {
+							try {
+								const response = await fetch(
+									'http://localhost:8080/api/categories', {
+										method: 'POST',
+										headers: {
+											'Content-Type': 'application/json'
+										},
+										body: JSON.stringify(this
+											.categoryForm)
+									});
+
+								const resText = await response.text();
+
+								// 先判断是否是JSON格式
+								let resData;
+								try {
+									resData = JSON.parse(resText);
+								} catch {
+									resData = null;
+								}
+
+								if (response.ok) {
+									// 成功处理
+									this.fetchCategories();
+									this.addCategoryDialogVisible = false;
+									ElMessage.success("分类添加成功");
+								} else {
+									// 根据后端返回内容提示
+									let msg = resData?.message ||
+										`添加失败，状态码：${response.status}`;
+									ElMessage.error(msg);
+								}
+							} catch (error) {
+								ElMessage.error("添加分类出错");
+								console.error(error);
+							}
+						},
+						//更新分类
+						async updateCategory() {
+							try {
+								const response = await fetch(
+									`http://localhost:8080/api/categories/${this.categoryForm.id}`, {
+										method: 'PUT',
+										headers: {
+											'Content-Type': 'application/json'
+										},
+										body: JSON.stringify(this
+											.categoryForm),
+									});
+
+								if (response.ok) {
+									this.fetchCategories();
+									this.editCategoryDialogVisible = false;
+									ElMessage.success("分类更新成功");
+								} else {
+									const resData = await response.json();
+									ElMessage.error(resData.message ||
+										`更新失败，状态码：${response.status}`);
+
+								}
+							} catch (error) {
+								ElMessage.error("更新分类出错");
+								console.error(error);
+							}
+						},
+						//批量删除资源
+						handleResourceSelectionChange(selection) {
+							this.selectedResources = selection;
+						},
+						confirmBatchDelete() {
+							if (this.selectedResources.length === 0) {
+								this.$message.warning('请先选择要删除的资源');
+								return;
+							}
+							this.deleteType = 'resourceBatch';
+							this.confirmDeleteDialogVisible = true;
+						},
+						// 触发资源删除资源确认框
+						confirmDeleteResource(id) {
+							this.deleteId = id;
+							this.deleteType = 'resource'; // 标记为资源删除
+							this.confirmDeleteDialogVisible = true;
+						},
+						//触发类型删除资源确认框
+						confirmDeleteCategory(id) {
+							this.deleteId = id;
+							this.deleteType = 'category';
+							this.confirmDeleteDialogVisible = true;
+						},
+						confirmDeleteSuggestion(id) {
+							this.deleteType = 'suggestion';
+							this.deleteId = id;
+							this.confirmDeleteDialogVisible = true;
+						},
+						// 确认删除（通用）
+						async deleteConfirmed() {
+							try {
+								if (this.deleteType === 'category') {
+									const response = await fetch(
+										`http://localhost:8080/api/categories/${this.deleteId}`, {
+											method: 'DELETE'
+										});
+									const resData = await response
+										.json();
+									if (resData.code === 200) {
+										await this.fetchCategories();
+										ElMessage.success("分类删除成功");
+										this.confirmDeleteDialogVisible =
+											false;
+									} else {
+										ElMessage.error(
+											`删除失败: ${resData.message || '未知错误'}`
+										);
+									}
+								} else if (this.deleteType ===
+									'resource') {
+									const response = await fetch(
+										`http://localhost:8080/api/resources/${this.deleteId}`, {
+											method: 'DELETE'
+										});
+									const resData = await response
+										.json();
+									if (resData.code === 200) {
+										await this.fetchResourcesPage();
+										ElMessage.success("资源删除成功");
+										this.confirmDeleteDialogVisible =
+											false;
+									} else {
+										ElMessage.error(
+											`删除失败: ${resData.message || '未知错误'}`
+										);
+									}
+								} else if (this.deleteType ===
+									'resourceBatch') {
+									const ids = this.selectedResources
+										.map(item => item.id);
+									if (ids.length === 0) {
+										ElMessage.warning('请先选择要删除的资源');
+										return;
+									}
+									const response = await fetch(
+										'http://localhost:8080/api/resources/batch-delete', {
+											method: 'POST',
+											headers: {
+												'Content-Type': 'application/json'
+											},
+											body: JSON.stringify(
+												ids),
+										});
+									const resData = await response
+										.json();
+									if (resData.code === 200) {
+										ElMessage.success('批量删除成功');
+										await this.fetchResourcesPage();
+										this.selectedResources = [];
+										this.confirmDeleteDialogVisible =
+											false;
+									} else {
+										ElMessage.error(
+											`删除失败: ${resData.message || '未知错误'}`
+										);
+									}
+								} else if (this.deleteType ===
+									'suggestion') {
+									const response = await fetch(
+										`http://localhost:8080/api/suggestions/${this.deleteId}`, {
+											method: 'DELETE'
+										});
+									const resData = await response
+										.json();
+									if (resData.code === 200) {
+										ElMessage.success("建议删除成功");
+										await this.fetchSuggestions(this
+											.suggestionCurrentPage -
+											1, this
+											.suggestionPageSize);
+										this.confirmDeleteDialogVisible =
+											false;
+									} else {
+										ElMessage.error(
+											`删除失败: ${resData.message || '未知错误'}`
+										);
+									}
+								} else {
+									ElMessage.error('未知删除类型');
+								}
+							} catch (error) {
+								ElMessage.error("删除出错: " + error
+									.message);
+								console.error(error);
+							}
+						},
+						// 菜单切换
+						toggleMenu() {
+							this.isMenuActive = !this.isMenuActive;
+							this.isMaskActive = !this.isMaskActive;
+						},
+						// 页面切换
+						handleMenuSelect(key) {
+							this.activePage = key;
+							if (window.innerWidth <= 768) this
+								.toggleMenu();
+						},
+						// 退出登录
+						logout() {
+							ElMessageBox.confirm('确定要退出登录吗？', '确认退出', {
+								confirmButtonText: '确定',
+								cancelButtonText: '取消',
+								type: 'warning'
+							}).then(() => {
+								// 1️⃣ 删除本地 token
+								localStorage.removeItem("token");
+
+								// 2️⃣ 提示退出成功
+								ElMessage.success('退出登录成功');
+
+								// 3️⃣ 跳转到登录页面
+								window.location.href =
+									"admin.html";
+							}).catch(() => {
+								// 用户取消操作，不做处理
+							});
+						},
+
+
+						// 分类管理方法
+						showAddCategoryDialog() {
+							this.categoryForm = {
+								id: null,
+								code: "",
+								name: ""
+							};
+							this.addCategoryDialogVisible = true;
+						},
+						showEditCategoryDialog(category) {
+							this.categoryForm = {
+								...category
+							};
+							this.editCategoryDialogVisible = true;
+						},
+						//获取用户建议分页
+						fetchSuggestions(page = 0, size = 10) {
+							fetch(
+									`http://localhost:8080/api/suggestions?page=${page}&size=${size}`)
+								.then(res => res.json())
+								.then(data => {
+									if (data.code === 200) {
+										this.suggestions = data.data
+											.content.map(item => ({
+												...item,
+												status: item
+													.status ===
+													"未处理" ?
+													"pending" : "processed",
+												createDate: item
+													.createdAt
+											}));
+										this.suggestionTotal = data
+											.data.totalElements;
+									} else {
+										ElMessage.error(data
+											.message);
+									}
+								})
+								.catch(() => ElMessage.error(
+									"获取建议列表失败"));
+						},
+
+						// 用户建议方法
+						showViewSuggestionDialog(suggestion) {
+							this.viewSuggestionData = {
+								...suggestion
+							};
+							this.viewSuggestionDialogVisible = true;
+						},
+						showProcessSuggestionDialog(suggestion) {
+							this.suggestionForm = {
+								id: suggestion.id,
+								content: suggestion.content,
+								processNote: ""
+							};
+							this.processSuggestionDialogVisible = true;
+						},
+						processSuggestion() {
+							fetch(`http://localhost:8080/api/suggestions/${this.suggestionForm.id}/status`, {
+									method: 'PUT'
+								})
+								.then(res => res.json())
+								.then(data => {
+									if (data.code === 200) {
+										ElMessage.success("建议处理成功");
+										this.processSuggestionDialogVisible =
+											false;
+										this.fetchSuggestions(this
+											.suggestionCurrentPage -
+											1, this
+											.suggestionPageSize);
+									} else {
+										ElMessage.error(data
+											.message);
+									}
+								})
+								.catch(() => ElMessage.error(
+									"处理失败，请稍后重试"));
+						},
+
+
+						// 打开链接编辑弹窗
+						showEditTutorialDialog(tutorial) {
+							this.tutorialForm = {
+								...tutorial
+							}; // 复制对象，避免引用
+							this.editTutorialDialogVisible = true;
+						},
+
+						// 提交更新链接教程
+						async updateTutorial() {
+							if (!this.tutorialForm.link.trim()) {
+								this.$message.warning("请输入教程链接");
+								return;
+							}
+
+							try {
+								const res = await fetch(
+									`http://localhost:8080/api/tutorial/${this.tutorialForm.id}`, {
+										method: "PUT",
+										headers: {
+											"Content-Type": "application/json"
+										},
+										body: JSON.stringify({
+											url: this
+												.tutorialForm
+												.link
+										})
+									});
+
+								const data = await res.json();
+
+								if (data.code === 200) {
+									this.$message.success(
+										"教程链接更新成功");
+									this.editTutorialDialogVisible =
+										false;
+									this.resetTutorialForm();
+									this.fetchTutorials(); // 重新拉取列表
+								} else {
+									this.$message.error(data
+										.message || "更新失败");
+								}
+							} catch (error) {
+								console.error(error);
+								this.$message.error("请求失败: " + error
+									.message);
+							}
+						},
+						// 资源管理方法
+						showAddResourceDialog() {
+							this.resourceForm = {
+								id: null, // 新增资源ID由后端生成
+								title: "",
+								categoryId: null, // 确保是数字或 null
+								updatedAt: "", // 注意字段名改成 updatedAt 对应后端
+								source: "",
+								link: "",
+								isHot: false
+							};
+							this.addResourceDialogVisible = true;
+						},
+						showEditResourceDialog(resource) {
+							this.resourceForm = {
+								id: resource.id,
+								title: resource.title,
+								categoryId: resource.category
+									?.id || null,
+								updatedAt: resource.updatedAt ||
+									"",
+								source: resource.source || "",
+								link: resource.link || "",
+								isHot: resource.isHot || false
+							};
+							this.editResourceDialogVisible = true;
+						},
+						showViewResourceDialog(resource) {
+							this.viewResourceData = {
+								...resource
+							};
+							this.viewResourceDialogVisible = true;
+						},
+
+						// 新增资源，调用后端POST接口
+						async saveResource() {
+							try {
+								const response = await fetch(
+									"http://localhost:8080/api/resources", {
+										method: "POST",
+										headers: {
+											"Content-Type": "application/json"
+										},
+										body: JSON.stringify(
+											this
+											.resourceForm
+										)
+									});
+								const resData = await response
+									.json();
+								if (resData.code === 200) {
+									ElMessage.success("资源添加成功");
+									this.addResourceDialogVisible =
+										false;
+									this
+										.fetchResourcesPage(); // 重新拉取最新资源列表
+								} else {
+									ElMessage.error(resData
+										.message || "添加失败");
+
+								}
+							} catch (error) {
+								ElMessage.error("添加失败：" + error
+									.message);
+								console.error(error);
+							}
+						},
+
+						// 更新资源，调用后端PUT接口
+						async updateResource() {
+							try {
+								const response = await fetch(
+									`http://localhost:8080/api/resources/${this.resourceForm.id}`, {
+										method: "PUT",
+										headers: {
+											"Content-Type": "application/json"
+										},
+										body: JSON
+											.stringify(
+												this
+												.resourceForm
+											)
+									});
+								const resData =
+									await response.json();
+								if (resData.code === 200) {
+									ElMessage.success(
+										"资源更新成功");
+									this.editResourceDialogVisible =
+										false;
+									this
+										.fetchResourcesPage(); // 重新拉取最新资源列表
+								} else {
+									ElMessage.error(resData
+										.message ||
+										"更新失败");
+								}
+							} catch (error) {
+								ElMessage.error("更新失败：" +
+									error.message);
+								console.error(error);
+							}
+						},
+
+						// 搜索方法
+						searchResources() {
+							this.resourceCurrentPage = 1;
+							this.fetchResourcesPage();
+						},
+						handleFilterChange() {
+							this.resourceCurrentPage = 1;
+							this.fetchResourcesPage();
+						},
+						searchCategories() {
+							this.categoryCurrentPage = 1;
+						},
+						searchSuggestions() {
+							this.suggestionCurrentPage = 1;
+							this.fetchSuggestions(0, this
+								.suggestionPageSize);
+						},
+
+						// 分页方法
+						async fetchResourcesPage() {
+							try {
+								const pageIndex = this
+									.resourceCurrentPage -
+									1;
+								const params =
+									new URLSearchParams({
+										page: pageIndex,
+										size: this
+											.resourcePageSize,
+										keyword: this
+											.resourceSearch ||
+											'',
+										categoryId: this
+											.resourceCategoryFilter ||
+											'',
+										isHot: this
+											.resourceHotFilter ||
+											''
+									});
+
+								const response =
+									await fetch(
+										`http://localhost:8080/api/resources/page?${params.toString()}`
+									);
+								const resData =
+									await response
+									.json();
+
+								if (resData.code ===
+									200) {
+									this.resources =
+										resData.data
+										.content;
+									this.resourceTotal =
+										resData.data
+										.totalElements;
+								} else {
+									this.resources = [];
+									this.resourceTotal =
+										0;
+									ElMessage.error(
+										resData
+										.message ||
+										"获取资源失败");
+								}
+							} catch (error) {
+								this.resources = [];
+								this.resourceTotal = 0;
+								ElMessage.error(
+									`获取资源失败: ${error.message}`
+								);
+							}
+
+						},
+
+						handleResourceSizeChange(
+							newSize) {
+							this.resourcePageSize =
+								newSize;
+							this.resourceCurrentPage = 1;
+							this
+								.fetchResourcesPage(); // 注意调用分页接口函数
+						},
+
+						handleResourceCurrentChange(
+							newPage) {
+							this.resourceCurrentPage =
+								newPage;
+							this
+								.fetchResourcesPage(); // 注意调用分页接口函数
+						},
+
+						handleSuggestionSizeChange(val) {
+							this.suggestionPageSize =
+								val;
+							this.suggestionCurrentPage =
+								1;
+							this.fetchSuggestions(0,
+								val);
+						},
+						handleSuggestionCurrentChange(
+							val) {
+							this.suggestionCurrentPage =
+								val;
+							this.fetchSuggestions(val -
+								1, this
+								.suggestionPageSize);
+						},
+
+						// 导出全部资源到Excel
+						exportResources() {
+							fetch(
+									'http://localhost:8080/api/resources')
+								.then(res => {
+									if (!res.ok)
+										throw new Error(
+											`网络错误，状态码 ${res.status}`
+										);
+									return res
+										.json();
+								})
+								.then(responseData => {
+									if (responseData
+										.code !== 200
+									) {
+										ElMessage
+											.warning(
+												responseData
+												.message ||
+												"没有可导出的资源数据"
+											);
+										return;
+									}
+									const
+										allResources =
+										responseData
+										.data;
+
+									if (!Array
+										.isArray(
+											allResources
+										) ||
+										allResources
+										.length === 0
+									) {
+										ElMessage
+											.warning(
+												"没有可导出的资源数据"
+											);
+										return;
+									}
+
+									const
+										exportData =
+										allResources
+										.map(
+											resource =>
+											({
+												"资源ID": resource
+													.id,
+												"资源标题": resource
+													.title,
+												"资源分类": resource
+													.categoryName ||
+													(resource
+														.category ?
+														resource
+														.category
+														.name :
+														'无分类'
+													),
+												"更新日期": resource
+													.updatedAt,
+												"资源来源": resource
+													.source ||
+													"",
+												"资源链接": resource
+													.link,
+												"是否热门": resource
+													.isHot ?
+													"是" : "否"
+											}));
+
+									const worksheet =
+										XLSX.utils
+										.json_to_sheet(
+											exportData
+										);
+									const workbook =
+										XLSX.utils
+										.book_new();
+									XLSX.utils
+										.book_append_sheet(
+											workbook,
+											worksheet,
+											"资源列表");
+
+									XLSX.writeFile(
+										workbook,
+										`资源列表_${this.formatDate(new Date())}.xlsx`
+									);
+									ElMessage
+										.success(
+											"资源导出成功"
+										);
+								})
+								.catch(error => {
+									console.error(
+										"导出失败:",
+										error);
+									ElMessage.error(
+										"导出失败，请稍后再试"
+									);
+								});
+						},
+						// 导入资源（完善实现）
+						showImportResourceDialog() {
+							this.importResourceDialogVisible =
+								true;
+						},
+						triggerFileUpload() {
+							this.$refs.fileInput.click();
+						},
+						handleFileUpload(event) {
+							const file = event.target
+								.files[0];
+							if (!file) return;
+
+							// 重置导入状态
+							this.importProgress = 0;
+							this.importStatusText =
+								"正在解析文件...";
+							this.importSuccessCount = 0;
+							this.importErrorCount = 0;
+							this.importErrors = [];
+
+							const reader =
+								new FileReader();
+							reader.onload = (e) => {
+								try {
+									// 解析Excel文件
+									const data =
+										new Uint8Array(
+											e.target
+											.result);
+									const workbook =
+										XLSX.read(
+											data, {
+												type: 'array'
+											});
+									const
+										firstSheetName =
+										workbook
+										.SheetNames[
+											0];
+									const worksheet =
+										workbook
+										.Sheets[
+											firstSheetName
+										];
+									const jsonData =
+										XLSX.utils
+										.sheet_to_json(
+											worksheet
+										);
+
+									// 验证并处理导入数据（忽略ID，由后端生成）
+									this.processImportData(
+										jsonData);
+								} catch (error) {
+									this.importStatusText =
+										"导入失败";
+									this.importErrors
+										.push(
+											"文件解析错误: " +
+											error
+											.message
+										);
+									this.importErrorCount =
+										1;
+								}
+							};
+							reader.readAsArrayBuffer(
+								file);
+
+							// 清空input值，允许重复上传同一文件
+							event.target.value = "";
+						},
+						async processImportData(data) {
+							this.importProgress = 0;
+							this.importStatusText =
+								"正在验证数据格式...";
+							this.importSuccessCount =
+								0;
+							this.importErrorCount =
+								0;
+							this.importErrors = [];
+
+							const validData = [];
+
+							// 验证数据
+							data.forEach((item,
+								index) => {
+								try {
+									if (!
+										item[
+											"资源标题"
+										] ||
+
+										!
+										item[
+											"资源链接"
+										]
+									) {
+										throw new Error(
+											`缺少必填字段（标题或链接）`
+										);
+									}
+									const
+										category =
+										this
+										.categories
+										.find(
+											cat =>
+											cat
+											.name ===
+											item[
+												"资源分类"
+											]
+										);
+									if (!
+										category
+									) {
+										throw new Error(
+											`分类"${item["资源分类"]}"不存在`
+										);
+									}
+
+									validData
+										.push({
+											title: item[
+												"资源标题"
+											],
+											categoryName: item[
+												"资源分类"
+											],
+											releaseDate: item[
+													"发布日期"
+												] ||
+												this
+												.formatDate(
+													new Date()
+												),
+											source: item[
+													"资源来源"
+												] ||
+												"",
+											link: item[
+												"资源链接"
+											],
+											isHot: item[
+													"是否热门"
+												] ===
+												"是" ||
+												item[
+													"是否热门"
+												] ===
+												true
+										});
+
+									this
+										.importSuccessCount++;
+								} catch (
+									error) {
+									this.importErrors
+										.push(
+											`第${index + 2}行: ${error.message}`
+										);
+									this
+										.importErrorCount++;
+								}
+							});
+
+							if (this
+								.importErrorCount > 0
+							) {
+								this.importStatusText =
+									"验证完成，存在错误，请修正后重新导入";
+								ElMessage.error(
+									`存在 ${this.importErrorCount} 条错误，请查看详细信息`
+								);
+								return; // 停止导入流程
+							}
+
+							this.importProgress = 50;
+							this.importStatusText =
+								"正在导入数据...";
+
+							// 调用后端接口导入
+							await this
+								.importResourcesToBackend(
+									validData);
+
+							this.importProgress =
+								100;
+						},
+
+						//导入资源
+						async importResourcesToBackend(
+							data) {
+							if (data.length ===
+								0) {
+								this.importStatusText =
+									"没有有效数据可导入";
+								return;
+							}
+
+							try {
+								const response =
+									await fetch(
+										'http://localhost:8080/api/resources/importBatch', {
+											method: 'POST',
+											headers: {
+												'Content-Type': 'application/json'
+											},
+											body: JSON
+												.stringify(
+													data
+												)
+										});
+
+								const res =
+									await response
+									.json();
+
+								if (res.code ===
+									200) {
+									this.importStatusText =
+										"导入成功";
+									this.importSuccessCount =
+										res.data
+										?.successCount ||
+										0;
+									this.importErrorCount =
+										res.data
+										?.errorCount ||
+										0;
+									this.importErrors =
+										res.data
+										?.errors || [];
+									ElMessage
+										.success(
+											`导入成功，共 ${this.importSuccessCount} 条`
+										);
+									// 3秒后关闭
+									setTimeout(
+										() => {
+											this.importResourceDialogVisible =
+												false;
+										},
+										3000);
+									this
+										.fetchResourcesPage(); // 刷新列表
+								} else {
+									this.importStatusText =
+										"导入失败";
+									this.importSuccessCount =
+										res.data
+										?.successCount ||
+										0;
+									this.importErrorCount =
+										res.data
+										?.errorCount ||
+										0;
+									this.importErrors =
+										res.data
+										?.errors || [];
+									ElMessage
+										.error(
+											res
+											.message ||
+											"导入失败"
+										);
+								}
+
+
+							} catch (error) {
+								this.importStatusText =
+									"导入失败";
+								ElMessage.error(
+									"导入失败: " +
+									(error
+										.message ||
+										"未知错误"
+									));
+							}
+
+						},
+						downloadImportTemplate() {
+							const
+								templateData = [{
+									"资源标题": "示例资源标题",
+									"资源分类": "编程教程",
+									"发布日期": this
+										.formatDate(
+											new Date()
+										),
+									"资源来源": "示例来源",
+									"资源链接": "https://example.com/resource",
+									"是否热门": "是"
+								}];
+
+							// 创建工作簿和工作表
+							const worksheet =
+								XLSX.utils
+								.json_to_sheet(
+									templateData
+								);
+							const workbook = XLSX
+								.utils
+								.book_new();
+							XLSX.utils
+								.book_append_sheet(
+									workbook,
+									worksheet,
+									"资源导入模板");
+
+							XLSX.writeFile(
+								workbook,
+								"资源导入模板.xlsx"
+							);
+							ElMessage.success(
+								"导入模板下载成功");
+						},
+						// 重置表单
+						resetResourceForm() {
+							this.resourceForm = {
+								id: null,
+								title: "",
+								categoryId: "",
+								publishDate: "",
+								releaseDate: '',
+								updatedAt: "",
+								source: "",
+								link: "",
+								isHot: false
+							};
+						},
+						resetCategoryForm() {
+							this.categoryForm = {
+								id: null,
+								code: "",
+								name: ""
+							};
+						},
+						resetTutorialForm() {
+							this.tutorialForm = {
+								id: null,
+								link: ""
+							};
+						},
+						resetImportForm() {
+							this.importProgress =
+								0;
+							this.importSuccessCount =
+								0;
+							this.importErrorCount =
+								0;
+							this
+								.importErrors = [];
+						},
+
+						// 工具方法：格式化日期
+						formatDate(date) {
+							if (!date) return "";
+							if (!(
+									date instanceof Date)) {
+								date = new Date(
+									date);
+							}
+							const year = date
+								.getFullYear();
+							const month = String(
+								date
+								.getMonth() +
+								1).padStart(
+								2, '0');
+							const day = String(
+									date
+									.getDate())
+								.padStart(2,
+									'0');
+							return year + '-' +
+								month + '-' +
+								day;
+						},
+
+						// 工具方法：获取当前日期时间
+						getCurrentDateTime() {
+							const date =
+								new Date();
+							const year = date
+								.getFullYear();
+							const month = String(
+								date
+								.getMonth() +
+								1).padStart(
+								2, '0');
+							const day = String(
+									date
+									.getDate())
+								.padStart(2,
+									'0');
+							const hours = String(
+									date
+									.getHours())
+								.padStart(2,
+									'0');
+							const minutes =
+								String(date
+									.getMinutes()
+								).padStart(2,
+									'0');
+							const seconds =
+								String(date
+									.getSeconds()
+								).padStart(2,
+									'0');
+							return year + '-' +
+								month + '-' +
+								day + ' ' +
+								hours + ':' +
+								minutes + ':' +
+								seconds;
+						}
+					},
+					mounted() {
+						this.loadAccessData();
+						// 初始化数据
+						this.initData();
+						this.fetchCategories();
+						this.fetchDashboardStats();
+						this.fetchResourcesPage(); // 页面加载时先获取第一页数据
+						this.fetchSuggestions(this.suggestionCurrentPage - 1, this.suggestionPageSize);
+						// 初始化时根据窗口大小设置菜单状态
+						if (window.innerWidth > 768) {
+							this.isMenuActive = true;
+						}
+						// 页面加载时把当前用户名赋值到表单
+						const token = localStorage.getItem("token");
+						if (token) {
+							// 如果后端提供 /api/admin/current 接口获取当前用户信息
+							fetch("http://localhost:8080/api/admin/current", {
+									headers: {
+										"Authorization": "Bearer " + token
+									}
+								})
+								.then(res => res.json())
+								.then(data => {
+									if (data.code === 200) {
+										this.form.username = data.data.username; // 填入表单
+									}
+								});
+						}
+						// 监听窗口大小变化
+						window.addEventListener('resize', () => {
+							if (window.innerWidth > 768) {
+								this.isMenuActive = true;
+								this.isMaskActive = false;
+							} else {
+								this.isMenuActive = false;
+							}
+						});
+					}
+				}).use(ElementPlus).mount('#app');
+			});
+		</script>
+	</body>
+</html>
