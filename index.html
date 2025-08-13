@@ -14,6 +14,45 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcanvas/3.0.0/qrcanvas.min.js"></script>
 		<link rel="stylesheet" type="text/css" href="index.css" />
 	</head>
+	<style>
+		/* 新增教程弹窗样式 */
+		.tutorial-dialog .el-dialog__body {
+			padding: 20px;
+		}
+
+		.tutorial-content {
+			text-align: center;
+			padding: 10px 0;
+		}
+
+		.tutorial-content p {
+			margin-bottom: 20px;
+			line-height: 1.6;
+		}
+
+		.tutorial-link-container {
+			margin: 20px 0;
+		}
+
+		.tutorial-link {
+			display: inline-block;
+			padding: 12px 24px;
+			background-color: #409eff;
+			color: white !important;
+			border-radius: 4px;
+			text-decoration: none;
+			transition: background-color 0.3s;
+			font-size: 16px;
+		}
+
+		.tutorial-link:hover {
+			background-color: #66b1ff;
+		}
+
+		.tutorial-link i {
+			margin-right: 8px;
+		}
+	</style>
 	<body>
 		<div class="head-bg"></div>
 		<div id="app" v-cloak>
@@ -34,7 +73,11 @@
 					</div>
 
 					<div class="nav-items">
-						<!-- 电脑端只保留提交需求按钮 -->
+						<!-- 新增使用教程按钮 -->
+						<div class="nav-item primary" @click="openTutorialDialog">
+							<i class="fas fa-book"></i> 使用教程
+						</div>
+						<!-- 原有提交需求按钮 -->
 						<div class="nav-item primary" @click="openSubmitDialog">
 							<i class="fas fa-plus-circle"></i> 提交需求
 						</div>
@@ -177,7 +220,8 @@
 			<!-- 提交需求对话框 -->
 			<el-dialog v-model="submitDialogVisible" title="提交资源需求" width="90%" :max-width="500"
 				custom-class="resource-dialog">
-				<el-input type="textarea" :rows="5" placeholder="请输入您想看的资源信息，我们会尽快添加~" v-model="resourceRequest">
+				<el-input type="textarea" :rows="5" placeholder="请输入您想看的资源信息,我们会尽快添加,比如剧名还有主演~"
+					v-model="resourceRequest">
 				</el-input>
 				<template #footer>
 					<span class="dialog-footer">
@@ -188,7 +232,23 @@
 					</span>
 				</template>
 			</el-dialog>
+			<el-dialog v-model="tutorialDialogVisible" title="网站公告" width="90%" :max-width="500"
+				custom-class="tutorial-dialog">
+				<div class="tutorial-content">
+					<p>地址可能不定期更换，建议您收藏下方的教程链接以便随时找回我们。</p>
 
+					<div class="tutorial-link-container">
+						<a href="https://example.com/tutorial" target="_blank" class="tutorial-link">
+							<i class="fas fa-external-link-alt"></i> 查看使用教程
+						</a>
+					</div>
+				</div>
+				<template #footer>
+					<span class="dialog-footer">
+						<el-button type="primary" @click="tutorialDialogVisible = false">我知道了</el-button>
+					</span>
+				</template>
+			</el-dialog>
 			<script>
 				const {
 					createApp,
@@ -271,28 +331,47 @@
 						};
 
 						// 提交资源需求
-						const submitResourceRequest = () => {
-							if (!resourceRequest.value.trim()) {
-								ElMessage.warning("请输入需求内容");
-								return;
-							}
-							// 这里调用后端接口提交需求
-							// axios.post(...)
-							ElMessage.success("提交成功，感谢您的支持！");
-							resourceRequest.value = "";
-							submitDialogVisible.value = false;
+						const submitResourceRequest = async () => {
+						  if (!resourceRequest.value.trim()) {
+						    ElMessage.warning("请输入需求内容");
+						    return;
+						  }
+						  try {
+						    const res = await axios.post('http://172.20.10.5:8080/api/suggestions', {
+						      content: resourceRequest.value
+						    });
+						    if (res.data.code === 200) {
+						      ElMessage.success(res.data.message);
+						      resourceRequest.value = "";
+						      submitDialogVisible.value = false;
+						    } else {
+						      ElMessage.error(res.data.message || "提交失败");
+						    }
+						  } catch (error) {
+						    ElMessage.error("提交失败: " + error.message);
+						  }
 						};
 
-						// 帮助中心弹窗（示例）
-						const showHelpDocument = () => {
-							ElMessage.info("帮助文档功能暂未实现");
-						};
+
+
 
 						// 监听回车搜索，替代事件修饰符
 						const onKeyup = (event) => {
 							if (event.key === "Enter") {
 								search();
 							}
+						};
+						// 新增教程弹窗控制变量
+						const tutorialDialogVisible = ref(false);
+
+						// 打开教程弹窗方法
+						const openTutorialDialog = () => {
+							tutorialDialogVisible.value = true;
+						};
+
+						// 帮助中心点击事件（移动端）
+						const showHelpDocument = () => {
+							tutorialDialogVisible.value = true;
 						};
 
 						onMounted(() => {
@@ -301,7 +380,11 @@
 							fetchHotResources();
 						});
 
+
 						return {
+							tutorialDialogVisible,
+							openTutorialDialog,
+							showHelpDocument,
 							keyword,
 							results,
 							loading,
@@ -316,7 +399,7 @@
 							resourceRequest,
 							submitResourceRequest,
 							showHelpDocument,
-							onKeyup,
+							onKeyup
 						};
 					},
 				});
@@ -325,5 +408,4 @@
 				app.mount("#app");
 			</script>
 	</body>
-
 </html>
