@@ -1,0 +1,271 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+	background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+	background-size: 400% 400%;
+	animation: gradientBG 15s ease infinite;
+	height: 100vh;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	overflow: hidden;
+}
+
+@keyframes gradientBG {
+	0% {
+		background-position: 0% 50%;
+	}
+
+	50% {
+		background-position: 100% 50%;
+	}
+
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+.login-container {
+	display: flex;
+	width: 900px;
+	height: 550px;
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(12px);
+	border-radius: 20px;
+	box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+	overflow: hidden;
+	position: relative;
+	animation: fadeIn 0.8s ease-out;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(30px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.brand-section {
+	flex: 1;
+	background: linear-gradient(to bottom right, #0f4c81, #1c6ea4);
+	padding: 40px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	color: white;
+	position: relative;
+	overflow: hidden;
+}
+
+.brand-section::before {
+	content: '';
+	position: absolute;
+	width: 200%;
+	height: 200%;
+	top: -50%;
+	left: -50%;
+	background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+	transform: rotate(30deg);
+}
+
+.brand-logo {
+	font-size: 5rem;
+	margin-bottom: 20px;
+	color: rgba(255, 255, 255, 0.9);
+	text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+	z-index: 2;
+}
+
+.brand-title {
+	font-size: 2.2rem;
+	font-weight: 700;
+	margin-bottom: 10px;
+	text-align: center;
+	z-index: 2;
+}
+
+.brand-subtitle {
+	font-size: 1.1rem;
+	font-weight: 300;
+	opacity: 0.9;
+	text-align: center;
+	max-width: 80%;
+	line-height: 1.6;
+	z-index: 2;
+}
+
+.form-section {
+	flex: 1;
+	padding: 50px 40px;
+	background: white;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.form-header {
+	margin-bottom: 30px;
+	text-align: center;
+}
+
+.form-header h2 {
+	font-size: 1.8rem;
+	color: #2c3e50;
+	margin-bottom: 8px;
+}
+
+.form-header p {
+	color: #7f8c8d;
+	font-size: 0.95rem;
+}
+
+.el-form {
+	width: 100%;
+}
+
+.el-form-item {
+	margin-bottom: 22px;
+}
+
+.el-input {
+	border-radius: 8px;
+}
+
+.el-button {
+	border-radius: 8px;
+	height: 42px;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+	transition: all 0.3s ease;
+}
+
+.el-button--primary {
+	background: linear-gradient(to right, #1c6ea4, #0f4c81);
+	border: none;
+}
+
+.el-button--primary:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 5px 15px rgba(28, 110, 164, 0.4);
+}
+
+.remember-forgot {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+	font-size: 0.9rem;
+}
+
+.forgot-password {
+	color: #1c6ea4;
+	text-decoration: none;
+	transition: color 0.3s;
+}
+
+.forgot-password:hover {
+	color: #0f4c81;
+	text-decoration: underline;
+}
+
+.additional-options {
+	margin-top: 25px;
+	text-align: center;
+	color: #7f8c8d;
+	font-size: 0.9rem;
+}
+
+.additional-options a {
+	color: #1c6ea4;
+	text-decoration: none;
+	margin: 0 5px;
+}
+
+.copyright {
+	position: absolute;
+	bottom: 15px;
+	left: 0;
+	right: 0;
+	text-align: center;
+	color: rgba(255, 255, 255, 0.7);
+	font-size: 0.85rem;
+	z-index: 2;
+}
+
+.floating {
+	animation: floating 6s ease-in-out infinite;
+}
+
+@keyframes floating {
+	0% {
+		transform: translateY(0px);
+	}
+
+	50% {
+		transform: translateY(-15px);
+	}
+
+	100% {
+		transform: translateY(0px);
+	}
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+	.login-container {
+		flex-direction: column;
+		width: 90%;
+		height: auto;
+	}
+
+	.brand-section {
+		padding: 30px 20px;
+	}
+
+	.brand-logo {
+		font-size: 3rem;
+	}
+
+	.brand-title {
+		font-size: 1.8rem;
+	}
+
+	.form-section {
+		padding: 30px 25px;
+	}
+}
+
+.particles {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.particle {
+	position: absolute;
+	background: rgba(255, 255, 255, 0.5);
+	border-radius: 50%;
+	animation: particleMove linear infinite;
+}
+
+@keyframes particleMove {
+	to {
+		transform: translateY(100vh);
+	}
+}

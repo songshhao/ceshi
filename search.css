@@ -430,17 +430,20 @@ body {
 }
 
 .action-btn {
-	padding: 10px 20px;
-	border-radius: 8px;
-	font-weight: 600;
-	cursor: pointer;
-	transition: var(--transition);
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	border: none;
-	font-size: 14px;
-	text-decoration: none;
+    display: inline-block; /* 统一成行内块 */
+    padding: 6px 12px;
+    margin-right: 8px;
+    background-color: #409eff; /* 按钮颜色 */
+    color: #fff;
+    border-radius: 4px;
+    font-size: 14px;
+    text-decoration: none; /* 去掉 a 标签下划线 */
+    cursor: pointer;
+    border: none; /* 去掉 button 默认边框 */
+}
+
+.action-btn:hover {
+    background-color: #66b1ff;
 }
 
 .copy-btn {
