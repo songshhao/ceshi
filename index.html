@@ -1,438 +1,645 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-		<title>宋溪资源搜索站</title>
-		<meta name="referrer" content="no-referrer" />
-		<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-		<!-- 这里改用完整版 Vue，避免运行时版本无法处理事件修饰符 -->
-		<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-		<script src="https://unpkg.com/element-plus"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcanvas/3.0.0/qrcanvas.min.js"></script>
-		<link rel="stylesheet" type="text/css" href="index.css" />
-	</head>
-	<style>
-		/* 新增教程弹窗样式 */
-		.tutorial-dialog .el-dialog__body {
-			padding: 20px;
-		}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测一测：你的日常行为，藏着多少安全风险？</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            /* 整体白色背景 */
+            --bg-color: #ffffff;
+            --card-bg: #ffffff;
+            --text-main: #2f3542;
+            --text-sub: #747d8c;
+            
+            /* 选项冷色 */
+            --option-bg: #f1f2f6;
+            --option-border: #ced6e0;
+            --option-hover: #eccc68;
+            
+            /* 警示红系列 */
+            --primary-red: #ff4757; 
+            --light-red: rgba(255, 71, 87, 0.1);
+            --gradient-red: linear-gradient(135deg, #ff6b81, #ff4757);
+        }
 
-		.tutorial-content {
-			text-align: center;
-			padding: 10px 0;
-		}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Helvetica Neue', 'Helvetica', 'Microsoft YaHei', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh; /* 占满视口高度，为垂直居中提供基础 */
+            display: flex;
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 核心修改：垂直居中（之前是flex-start，现在改为center） */
+            padding: 20px; /* 保留左右上下内边距，避免小屏幕下卡片贴边 */
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 700px;
+            perspective: 1000px;
+            /* 容器内内容已居中，无需额外修改 */
+        }
+        
+        /* 卡片悬浮效果 */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 28px;
+            padding: 50px 35px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), 0 2px 10px rgba(0, 0, 0, 0.04);
+            width: 100%;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            margin-bottom: 30px;
+            transform: translateY(-2px);
+        }
 
-		.tutorial-content p {
-			margin-bottom: 20px;
-			line-height: 1.6;
-		}
+        .card:hover {
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.12), 0 4px 15px rgba(0, 0, 0, 0.06);
+            transform: translateY(-5px);
+        }
 
-		.tutorial-link-container {
-			margin: 20px 0;
-		}
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: var(--gradient-red);
+        }
 
-		.tutorial-link {
-			display: inline-block;
-			padding: 12px 24px;
-			background-color: #409eff;
-			color: white !important;
-			border-radius: 4px;
-			text-decoration: none;
-			transition: background-color 0.3s;
-			font-size: 16px;
-		}
+        /* 动画定义 */
+        .animate-enter {
+            animation: slideUpFade 0.6s ease forwards;
+        }
 
-		.tutorial-link:hover {
-			background-color: #66b1ff;
-		}
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-		.tutorial-link i {
-			margin-right: 8px;
-		}
-	</style>
-	<body>
-		<div class="head-bg"></div>
-		<div id="app" v-cloak>
-			<!-- 头部导航 -->
-			<header class="header-container">
-				<div class="header-content">
-					<a href="#" class="logo-box">
-						<i class="fas fa-cloud-download-alt logo-icon"></i>
-						<div class="logo-text">宋溪资源站</div>
-					</a>
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
 
-					<div class="search-container">
-						<input type="text" class="search-input" placeholder="输入电影、剧集、动漫等关键词..." v-model="keyword"
-							@keyup="onKeyup" />
-						<button class="search-btn" @click="search">
-							<i class="fas fa-search"></i>
-						</button>
-					</div>
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0); }
+            80% { transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
 
-					<div class="nav-items">
-						<!-- 新增使用教程按钮 -->
-						<div class="nav-item primary" @click="openTutorialDialog">
-							<i class="fas fa-book"></i> 使用教程
-						</div>
-						<!-- 原有提交需求按钮 -->
-						<div class="nav-item primary" @click="openSubmitDialog">
-							<i class="fas fa-plus-circle"></i> 提交需求
-						</div>
-					</div>
+        @keyframes imgFadeIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
 
-					<!-- 添加汉堡菜单按钮 -->
-					<button class="hamburger-btn" @click="openSideMenu">
-						<i class="fas fa-bars"></i>
-					</button>
-				</div>
-			</header>
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
 
-			<!-- 主体内容 -->
-			<main class="main-container">
-				<section class="hero-section animate-fadeIn">
-					<!-- 修改标题 -->
-					<h1 class="hero-title">宋溪资源搜索站 - 您的网盘资源管家</h1>
-					<p class="hero-subtitle">
-						免费分享百万级网盘资源，致力打造顶尖网盘搜索引擎，让您畅享资源无忧！
-						最新影视、热门动漫、精彩综艺一键获取，全网资源尽在掌握。
-					</p>
+        /* 标题与文字 */
+        .title {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--text-main);
+            position: relative;
+            padding-bottom: 18px;
+        }
+        
+        .title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 4px;
+            background-color: var(--primary-red);
+            border-radius: 2px;
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: var(--text-sub);
+            margin-bottom: 35px;
+            line-height: 1.7;
+        }
+        
+        .icon-lg {
+            font-size: 80px;
+            color: var(--primary-red);
+            margin: 20px 0 30px;
+            filter: drop-shadow(0 10px 15px rgba(255, 71, 87, 0.3));
+            animation: pulse 3s infinite ease-in-out;
+        }
 
-					<div class="search-box">
-						<input type="text" class="search-input" placeholder="输入关键字搜索海量资源..." v-model="keyword"
-							@keyup="onKeyup" />
-						<button class="search-btn" @click="search">
-							<i class="fas fa-search"></i>
-						</button>
-					</div>
-				</section>
+        .home-img {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 16px;
+            margin: 25px 0;
+            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.15);
+            animation: imgFadeIn 0.8s ease forwards;
+            opacity: 0;
+        }
 
-				<section class="category-section">
-					<div class="category-card animate-fadeIn delay-100">
-						<div class="category-header">
-							<i class="fas fa-film"></i> 热门短剧
-						</div>
-						<div class="category-list">
-							<a href="#" class="resource-item" v-for="(item, index) in hotResources.shortDrama"
-								:key="index" @click.prevent="showResourceDetail(item.title, '短剧')">
-								<div class="resource-rank">{{ index + 1 }}</div>
-								<div class="resource-name">{{ item.title }}</div>
-							</a>
-						</div>
-					</div>
+        .float-item {
+            position: absolute;
+            color: rgba(255, 71, 87, 0.2);
+            font-size: 24px;
+            z-index: 1;
+            animation: float 6s infinite ease-in-out;
+        }
 
-					<div class="category-card animate-fadeIn delay-200">
-						<div class="category-header">
-							<i class="fas fa-video"></i> 最新电影
-						</div>
-						<div class="category-list">
-							<a href="#" class="resource-item" v-for="(item, index) in hotResources.movie" :key="index"
-								@click.prevent="showResourceDetail(item.title, '电影')">
-								<div class="resource-rank">{{ index + 1 }}</div>
-								<div class="resource-name">{{ item.title }}</div>
-							</a>
-						</div>
-					</div>
+        /* 介绍页列表 */
+        .intro-list {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0 30px;
+            border-left: 4px solid var(--primary-red);
+        }
 
-					<div class="category-card animate-fadeIn delay-300">
-						<div class="category-header">
-							<i class="fas fa-tv"></i> 电视剧集
-						</div>
-						<div class="category-list">
-							<a href="#" class="resource-item" v-for="(item, index) in hotResources.tv" :key="index"
-								@click.prevent="showResourceDetail(item.title, '电视剧')">
-								<div class="resource-rank">{{ index + 1 }}</div>
-								<div class="resource-name">{{ item.title }}</div>
-							</a>
-						</div>
-					</div>
+        .intro-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            color: #57606f;
+            font-size: 15px;
+        }
 
-					<div class="category-card animate-fadeIn delay-400">
-						<div class="category-header">
-							<i class="fas fa-dragon"></i> 动漫动画
-						</div>
-						<div class="category-list">
-							<a href="#" class="resource-item" v-for="(item, index) in hotResources.anime" :key="index"
-								@click.prevent="showResourceDetail(item.title, '动漫')">
-								<div class="resource-rank">{{ index + 1 }}</div>
-								<div class="resource-name">{{ item.title }}</div>
-							</a>
-						</div>
-					</div>
+        .intro-item i {
+            color: var(--primary-red);
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
 
-					<div class="category-card animate-fadeIn delay-500">
-						<div class="category-header">
-							<i class="fas fa-microphone-alt"></i> 综艺节目
-						</div>
-						<div class="category-list">
-							<a href="#" class="resource-item" v-for="(item, index) in hotResources.variety" :key="index"
-								@click.prevent="showResourceDetail(item.title, '综艺')">
-								<div class="resource-rank">{{ index + 1 }}</div>
-								<div class="resource-name">{{ item.title }}</div>
-							</a>
-						</div>
-					</div>
-				</section>
+        /* 进度条 */
+        .progress-wrapper {
+            margin: 10px 0 30px;
+        }
 
-			</main>
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
 
-			<!-- 页脚 -->
-			<footer class="footer-container">
-				<div class="footer-content">
-					<p class="footer-statement">
-						声明：本站是网盘索引系统,所有内容均来自互联网所提供的公开引用资源，不存储、不传播任何文件，跳转链接指向网盘官网。
-						文件内容请自行辨别，如发现违规请向网盘平台举报。本站仅供学习交流，无任何收费行为。
-					</p>
+        .progress-bg {
+            width: 100%;
+            height: 8px;
+            background-color: #f1f2f6;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: var(--gradient-red);
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0;
+        }
+        
+        /* 题目内容 */
+        .question-content {
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
 
-					<div class="copyright">
-						<!-- 修改版权信息 -->
-						© 2025 宋溪资源搜索站 - 让资源获取更简单
-					</div>
-				</div>
-			</footer>
+        .question-text {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: var(--text-main);
+            text-align: left;
+            line-height: 1.5;
+        }
+        
+        /* 选项样式 */
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .option {
+            background-color: var(--option-bg);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 18px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .option:active {
+            transform: scale(0.98);
+        }
 
-			<!-- 侧边菜单 -->
-			<div class="side-menu-overlay" :class="{ active: sideMenuVisible }" @click.self="closeSideMenu">
-				<div class="side-menu">
-					<div class="side-menu-header">
-						<h3>宋溪资源搜索站</h3>
-						<button class="menu-close-btn" @click="closeSideMenu">
-							<i class="fas fa-times"></i>
-						</button>
-					</div>
+        .option.selected {
+            background-color: var(--light-red);
+            border-color: var(--primary-red);
+            color: var(--primary-red);
+            font-weight: 600;
+        }
 
-					<div class="menu-items">
-						<div class="menu-item" @click="openSubmitDialog">
-							<i class="fas fa-plus-circle"></i>
-							<span>提交需求</span>
-						</div>
+        .option-marker {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #dfe4ea;
+            color: #747d8c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
 
-						<div class="menu-item" @click="showHelpDocument">
-							<i class="fas fa-question-circle"></i>
-							<span>帮助中心</span>
-						</div>
-					</div>
-				</div>
-			</div>
+        .option.selected .option-marker {
+            background-color: var(--primary-red);
+            color: white;
+        }
+        
+        /* 按钮样式 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gradient-red);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 18px 50px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            box-shadow: 0 10px 20px rgba(255, 71, 87, 0.3);
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(255, 71, 87, 0.4);
+        }
 
-			<!-- 提交需求对话框 -->
-			<el-dialog v-model="submitDialogVisible" title="提交资源需求" width="90%" :max-width="500"
-				custom-class="resource-dialog">
-				<el-input type="textarea" :rows="5" placeholder="请输入您想看的资源信息,我们会尽快添加,比如剧名还有主演~"
-					v-model="resourceRequest">
-				</el-input>
-				<template #footer>
-					<span class="dialog-footer">
-						<el-button @click="submitDialogVisible = false">取消</el-button>
-						<el-button type="primary" @click="submitResourceRequest">
-							提交需求
-						</el-button>
-					</span>
-				</template>
-			</el-dialog>
-			<el-dialog v-model="tutorialDialogVisible" title="网站公告" width="90%" :max-width="500"
-				custom-class="tutorial-dialog">
-				<div class="tutorial-content">
-					<p>地址可能不定期更换，建议您收藏下方的教程链接以便随时找回我们。</p>
+        .btn-secondary {
+            background: white;
+            color: var(--text-sub);
+            border: 2px solid #dfe4ea;
+            box-shadow: none;
+            margin-top: 10px;
+            font-size: 16px;
+            padding: 16px 45px;
+        }
 
-					<div class="tutorial-link-container">
-						<a :href="tutorialUrl" target="_blank" class="tutorial-link">
-						    <i class="fas fa-external-link-alt"></i> 查看使用教程
-						</a>
+        .btn-secondary:hover {
+            border-color: var(--text-sub);
+            transform: translateY(-1px);
+        }
+        
+        /* 结果页 */
+        .result-score {
+            font-size: 16px;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+        }
 
+        .stars-container {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 15px 0 25px;
+        }
 
+        .star {
+            font-size: 32px;
+            color: #dfe4ea;
+            opacity: 0;
+        }
 
-					</div>
-				</div>
-				<template #footer>
-					<span class="dialog-footer">
-						<el-button type="primary" @click="tutorialDialogVisible = false">我知道了</el-button>
-					</span>
-				</template>
-			</el-dialog>
-			<script>
-				const {
-					createApp,
-					ref,
-					onMounted
-				} = Vue;
-				const {
-					ElMessage
-				} = ElementPlus;
+        .star.filled {
+            color: #ffa502;
+        }
 
-				const app = createApp({
-					setup() {
-						// 搜索相关
-						const keyword = ref("");
-						const results = ref([]);
-						const loading = ref(false);
+        .result-feedback {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #57606f;
+            text-align: left;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            border-top: 3px solid var(--primary-red);
+        }
 
-						// 热门资源
-						const hotResources = ref({
-							shortDrama: [],
-							movie: [],
-							tv: [],
-							anime: [],
-							variety: [],
-			 		});
+        .hidden {
+            display: none !important;
+        }
 
-						// 页面控制
-						const sideMenuVisible = ref(false);
-						const submitDialogVisible = ref(false);
-						const resourceRequest = ref("");
+        .fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
 
-						// 教程弹窗
-			  	const tutorialDialogVisible = ref(false);
-						const tutorialUrl = ref(""); // 数据库链接
+        .fade-in {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.4s ease;
+        }
 
-						// 从 URL 获取关键词
-						const getKeywordFromURL = () => {
-							const params = new URLSearchParams(window.location.search);
-							return params.get("keyword") || "";
-						};
+    </style>
+</head>
+<body>
 
-						// 搜索跳转
-						const search = () => {
-							if (!keyword.value.trim()) {
-			 				ElMessage.warning("请输入搜索关键词");
-								return;
-							}
-							window.location.href = `search.html?keyword=${encodeURIComponent(keyword.value.trim())}`;
-			 		};
+    <div class="container">
+        <!-- 首页 -->
+        <div class="card animate-enter" id="start-page">
+            <!-- 漂浮装饰元素 -->
+            <div class="float-item" style="top: 30px; left: 20px; animation-delay: 0s;">
+                <i class="fas fa-shield-halved"></i>
+            </div>
+            <div class="float-item" style="top: 50px; right: 20px; animation-delay: 1s;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="float-item" style="bottom: 80px; left: 40px; animation-delay: 2s;">
+                <i class="fas fa-lock"></i>
+            </div>
+            <div class="float-item" style="bottom: 100px; right: 40px; animation-delay: 3s;">
+                <i class="fas fa-user-secret"></i>
+            </div>
 
-						// 热门资源获取
-						const fetchHotResources = async () => {
-						    try {
-						        const res = await fetch("http://192.168.1.25:8080/api/hot", {
-						            credentials: 'include'
-						        });
-						        const data = await res.json();
-						        if (data.code === 200) {
-						            hotResources.value = data.data;
-						        } else {
-						            ElMessage.warning(data.message || "获取热门资源失败");
-						        }
-						    } catch (e) {
-						        console.error(e);
-						        ElMessage.error("获取热门资源失败");
-						    }
-						};
+            <div class="icon-lg">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <img src="https://picsum.photos/seed/safetest/600/300" alt="女性安全防护插画" class="home-img">
+            <h1 class="title">日常行为风险测试</h1>
+            <p class="subtitle">你的习惯真的安全吗？<br>5道题揭秘女性日常场景的隐形危机</p>
+            
+            <button class="btn" onclick="goToPage('intro-page')">
+                开始测试 <i class="fas fa-arrow-right" style="margin-left:10px"></i>
+            </button>
+        </div>
 
-						// 教程链接获取
-						const fetchTutorial = async () => {
-						    try {
-						        const res = await fetch("http://192.168.1.25:8080/api/tutorial/latest", {
-						            credentials: 'include'
-						        });
-						        const data = await res.json();
-						        if (data.code === 200 && data.data) {
-						            tutorialUrl.value = data.data.url;
-						        } else {
-						            console.warn("获取教程链接失败:", data.message);
-						        }
-						    } catch (err) {
-						        console.error("获取教程链接异常:", err);
-						    }
-						};
+        <div class="card hidden" id="intro-page">
+            <h2 class="title" style="font-size: 26px;">测试说明</h2>
+            
+            <div class="intro-list">
+                <div class="intro-item"><i class="fas fa-check-circle"></i> 共 5 道情景模拟题</div>
+                <div class="intro-item"><i class="fas fa-check-circle"></i> 选择你第一反应的做法</div>
+                <div class="intro-item"><i class="fas fa-check-circle"></i> 自动跳转，无需点击下一题</div>
+            </div>
 
-						// 显示资源详情跳转
-						const showResourceDetail = (title, category) => {
-							window.location.href =
-								`search.html?keyword=${encodeURIComponent(title)}&category=${encodeURIComponent(category)}`;
-						};
+            <p style="font-size: 14px; color: #999; margin-bottom: 25px;">
+                *本测试基于《荆棘闻途》真实案例改编
+            </p>
+            
+            <button class="btn" onclick="startTest()">
+                <i class="fas fa-play-circle" style="margin-right:8px"></i> 进入答题
+            </button>
+        </div>
 
-						// 汉堡菜单
-						const openSideMenu = () => sideMenuVisible.value = true;
-						const closeSideMenu = () => sideMenuVisible.value = false;
+        <div class="card hidden" id="question-page">
+            <div class="progress-wrapper">
+                <div class="progress-info">
+                    <span>进度</span>
+                    <span><span id="current-q">1</span> / 5</span>
+                </div>
+                <div class="progress-bg">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+            </div>
 
-						// 提交需求弹窗
-						const openSubmitDialog = () => submitDialogVisible.value = true;
+            <div id="question-container" class="question-content">
+                <div class="question-text" id="question-text">题目加载中...</div>
+                <div class="options-container" id="options-container">
+                    </div>
+            </div>
+        </div>
 
-						// 提交资源需求
-						const submitResourceRequest = async () => {
-						    if (!resourceRequest.value.trim()) {
-						        ElMessage.warning("请输入需求内容");
-						        return;
-						    }
-						    try {
-						        const res = await fetch('http://192.168.1.25:8080/api/suggestions', {
-						            method: 'POST',
-						            headers: {
-						                'Content-Type': 'application/json'
-						            },
-						            body: JSON.stringify({
-						                content: resourceRequest.value
-						            }),
-						            credentials: 'include'
-						        });
-						        const data = await res.json();
-						        if (data.code === 200) {
-						            ElMessage.success(data.message);
-						            resourceRequest.value = "";
-						            submitDialogVisible.value = false;
-						        } else {
-						            ElMessage.error(data.message || "提交失败");
-						        }
-						    } catch (error) {
-						        ElMessage.error("提交失败: " + error.message);
-						    }
-						};
+        <div class="card hidden" id="result-page">
+            <div class="icon-lg" style="font-size: 60px; margin-bottom: 10px;">
+                <i class="fas fa-clipboard-check"></i>
+            </div>
+            <div class="result-score" id="result-risk-level">风险评估完成</div>
+            <h2 class="title" id="result-title">谨慎派</h2>
+            
+            <div class="stars-container" id="stars-box">
+                </div>
 
-						// 回车搜索
-						const onKeyup = (event) => {
-							if (event.key === "Enter") search();
-						};
+            <div class="result-feedback" id="result-feedback">
+                评价加载中...
+            </div>
+            
+            <a href="https://example.com/jingjiwentu" target="_blank" class="btn">
+                搜索“荆棘闻途”解锁完整闯关 <i class="fas fa-gamepad" style="margin-left:8px"></i>
+            </a>
+            <button class="btn btn-secondary" onclick="location.reload()">
+                分享我的测试结果
+            </button>
+        </div>
+    </div>
 
-						// 教程弹窗控制
-						const openTutorialDialog = () => tutorialDialogVisible.value = true;
-						const showHelpDocument = () => tutorialDialogVisible.value = true;
+    <script>
+        // 数据配置
+        const questions = [
+            {
+                text: "在校园遇到陌生同学求助：“无论如何帮我给厕所里的朋友送个东西”，你会？",
+                options: [
+                    { text: "热心帮忙，既然是校友应该没问题", value: "A" },
+                    { text: "礼貌拒绝，建议找工作人员帮忙", value: "B" }
+                ]
+            },
+            {
+                text: "晚上8点独自在家，想喝奶茶，外卖到了敲门，你会？",
+                options: [
+                    { text: "直接开门拿，反正只有一会儿", value: "A" },
+                    { text: "让对方放门口，等骑手走了再拿", value: "B" }
+                ]
+            },
+            {
+                text: "景区拍照时，陌生异性非常热情要求加微信交个朋友，你会？",
+                options: [
+                    { text: "不好意思拒绝，加了之后屏蔽", value: "A" },
+                    { text: "明确拒绝，表示“不方便”", value: "B" }
+                ]
+            },
+            {
+                text: "凌晨3点下班，发现快递还在楼下快递柜，你会？",
+                options: [
+                    { text: "顺路取了再上楼，省得明天跑", value: "A" },
+                    { text: "放弃取件，明天白天再说", value: "B" }
+                ]
+            },
+            {
+                text: "网约车上，司机偏航并说“这条路不堵”，你会？",
+                options: [
+                    { text: "保持沉默，看着导航不敢说话", value: "A" },
+                    { text: "立即要求停车或打电话给亲友报备", value: "B" }
+                ]
+            }
+        ];
 
-						onMounted(() => {
-							keyword.value = getKeywordFromURL();
-							if (keyword.value) search();
-							fetchHotResources();
-							fetchTutorial();
-						});
+        const results = {
+            low: {
+                title: "谨慎派",
+                risk: "低风险",
+                starCount: 5,
+                feedback: "你有极强的安全意识！但在《荆棘闻途》的世界里，有些危险即便你做出了“正确选择”也无法规避。去游戏中体验更真实的困境吧。"
+            },
+            medium: {
+                title: "平衡派",
+                risk: "中风险",
+                starCount: 3,
+                feedback: "你兼顾善意与谨慎，但在某些放松警惕的时刻，危险可能趁虚而入。在《荆棘闻途》中，你将面临更复杂的两难抉择。"
+            },
+            high: {
+                title: "善意派",
+                risk: "高风险",
+                starCount: 2,
+                feedback: "你的善良可能成为被利用的弱点。这不是你的错，而是环境还不够安全。推荐进入《荆棘闻途》，在模拟场景中提升你的防御力。"
+            }
+        };
 
-						return {
-							// 搜索
-							keyword,
-							results,
-							loading,
-							search,
-							onKeyup,
+        let currentIdx = 0;
+        let userAnswers = [];
+        let isTransitioning = false;
 
-							// 热门资源
-							hotResources,
-							showResourceDetail,
+        // 页面跳转辅助
+        function goToPage(pageId) {
+            document.querySelectorAll('.card').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById(pageId);
+            target.classList.remove('hidden');
+            target.classList.add('animate-enter');
+            
+            setTimeout(() => target.classList.remove('animate-enter'), 600);
+        }
 
-							// 页面控制
-			  		sideMenuVisible,
-							openSideMenu,
-							closeSideMenu,
+        function startTest() {
+            currentIdx = 0;
+            userAnswers = [];
+            goToPage('question-page');
+            renderQuestion();
+        }
 
-							// 提交需求
-							submitDialogVisible,
-							openSubmitDialog,
-							resourceRequest,
-							submitResourceRequest,
+        function renderQuestion() {
+            const q = questions[currentIdx];
+            const qContainer = document.getElementById('question-container');
+            
+            qContainer.style.opacity = '0';
+            qContainer.style.transform = 'translateY(20px)';
+            
+            document.getElementById('current-q').innerText = currentIdx + 1;
+            document.getElementById('progress-bar').style.width = `${((currentIdx) / 5) * 100}%`;
+            
+            setTimeout(() => {
+                document.getElementById('question-text').innerText = q.text;
+                const optsBox = document.getElementById('options-container');
+                optsBox.innerHTML = '';
+                
+                q.options.forEach((opt, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'option';
+                    div.innerHTML = `
+                        <div class="option-marker">${String.fromCharCode(65 + index)}</div>
+                        <div style="flex:1">${opt.text}</div>
+                    `;
+                    div.onclick = () => handleSelect(opt.value, div);
+                    optsBox.appendChild(div);
+                });
 
-							// 教程
-							tutorialDialogVisible,
-			  		tutorialUrl,
-							openTutorialDialog,
-							showHelpDocument
-						};
-					},
-				});
+                qContainer.style.transition = 'all 0.4s ease-out';
+                qContainer.style.opacity = '1';
+                qContainer.style.transform = 'translateY(0)';
+                isTransitioning = false;
+            }, 300);
+        }
 
-				app.use(ElementPlus);
-				app.mount("#app");
-			</script>
+        function handleSelect(val, element) {
+            if (isTransitioning) return;
+            isTransitioning = true;
 
-	</body>
+            const allOpts = document.querySelectorAll('.option');
+            allOpts.forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
 
+            userAnswers.push(val);
+
+            document.getElementById('progress-bar').style.width = `${((currentIdx + 1) / 5) * 100}%`;
+
+            setTimeout(() => {
+                if (currentIdx < questions.length - 1) {
+                    currentIdx++;
+                    renderQuestion();
+                } else {
+                    showResult();
+                }
+            }, 600);
+        }
+
+        function showResult() {
+            const safeCount = userAnswers.filter(a => a === 'B').length;
+            let resultKey = 'high';
+            if (safeCount >= 4) resultKey = 'low';
+            else if (safeCount >= 2) resultKey = 'medium';
+
+            const data = results[resultKey];
+
+            document.getElementById('result-title').innerText = data.title;
+            document.getElementById('result-risk-level').innerText = `安全评估：${data.risk}`;
+            document.getElementById('result-feedback').innerText = data.feedback;
+
+            const starsBox = document.getElementById('stars-box');
+            starsBox.innerHTML = '';
+            for(let i=0; i<5; i++) {
+                const star = document.createElement('i');
+                star.className = `fas fa-star star ${i < data.starCount ? 'filled' : ''}`;
+                starsBox.appendChild(star);
+                
+                setTimeout(() => {
+                    star.style.animation = 'popIn 0.5s forwards';
+                }, i * 150);
+            }
+
+            goToPage('result-page');
+        }
+    </script>
+</body>
 </html>
-
